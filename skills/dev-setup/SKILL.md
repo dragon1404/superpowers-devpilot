@@ -75,45 +75,36 @@ Tell the developer:
 
 **Only run this section if `ado_status = MISSING`.**
 
-Tell the developer:
+Ask the developer:
 
 > ### Installing Azure DevOps MCP
 >
 > The Azure DevOps MCP server gives DevPilot access to your work items, repositories, and pull requests via the `mcp__azure-devops__*` tools.
 >
-> **Step 1 — Install the server:**
+> **What is your Azure DevOps organization name?**
+> (The org name from your ADO URL: `https://dev.azure.com/{org}`)
+
+Wait for the developer to provide their org name. Store it as `{org}`.
+
+Then tell the developer:
+
+> **Run this command in your terminal:**
+>
 > ```bash
-> npm install -g @microsoft/azure-devops-mcp
+> claude mcp add azure-devops --scope user -- npx -y @azure-devops/mcp {org}
 > ```
 >
-> **Step 2 — Configure Claude Code:**
+> This registers the Azure DevOps MCP server for your user account using your org `{org}`.
 >
-> Add the following to your Claude Code MCP configuration (usually `~/.claude/mcp_servers.json` or via Claude Code Settings → MCP Servers):
->
-> ```json
-> {
->   "azure-devops": {
->     "command": "azure-devops-mcp",
->     "env": {
->       "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
->       "AZURE_DEVOPS_AUTH_TYPE": "pat",
->       "AZURE_DEVOPS_TOKEN": "your-personal-access-token"
->     }
->   }
-> }
-> ```
->
-> Replace `your-org` with your Azure DevOps organization name and `your-personal-access-token` with a PAT that has the following scopes:
+> **Authentication:** The MCP server uses your existing Azure DevOps credentials. If prompted, authenticate via the browser flow or set the `AZURE_DEVOPS_TOKEN` environment variable to a Personal Access Token with these scopes:
 > - **Work Items:** Read & Write
 > - **Code:** Read
 > - **Pull Requests:** Read & Write
 >
-> **Generate a PAT:** Azure DevOps → User Settings → Personal Access Tokens → New Token
->
-> **Step 3 — Restart Claude Code** to load the new MCP server.
+> Generate a PAT at: Azure DevOps → User Settings → Personal Access Tokens → New Token
 >
 > **Verify:**
-> After restarting, run `/dev-setup` again to confirm the status shows FOUND.
+> After running the command, restart Claude Code and run `/dev-setup` again to confirm the status shows FOUND.
 >
 > Repository: https://github.com/microsoft/azure-devops-mcp
 
