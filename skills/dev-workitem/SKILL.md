@@ -13,6 +13,39 @@ Extract the workItemId from the user's message (the integer following `/dev-work
 
 If no workItemId is provided, stop and say: "Please provide a work item ID. Usage: /dev-workitem <workItemId>"
 
+## Step 1b — Check Prerequisites
+
+Before doing anything else, verify both required dependencies are available.
+
+**Check 1 — superpowers plugin:**
+
+Check whether the superpowers skills directory exists at:
+`~/.claude/plugins/cache/claude-plugins-official/superpowers/`
+
+Run:
+```bash
+ls ~/.claude/plugins/cache/claude-plugins-official/superpowers/ 2>/dev/null && echo "FOUND" || echo "MISSING"
+```
+
+**Check 2 — Azure DevOps MCP:**
+
+Check whether `mcp__azure-devops__wit_get_work_item` is available as a tool in the current session. If Azure DevOps MCP tools are listed in your available tools, the server is configured. If not, it is missing.
+
+**If either dependency is missing**, stop and say:
+
+> **DevPilot prerequisites not met.**
+>
+> The following are required before using DevPilot:
+>
+> | Dependency | Status | Install |
+> |---|---|---|
+> | superpowers plugin | {FOUND/MISSING} | https://github.com/obra/superpowers |
+> | Azure DevOps MCP | {FOUND/MISSING} | https://github.com/microsoft/azure-devops-mcp |
+>
+> Run `/dev-setup` for a guided installation walkthrough.
+
+If both dependencies are present, continue to Step 2.
+
 ## Step 2 — Check for Existing Workflow
 
 Check if `.devpilot/state/{workItemId}.json` exists in the current working directory.

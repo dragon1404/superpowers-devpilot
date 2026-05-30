@@ -32,16 +32,17 @@ At each automated stage, DevPilot posts a `[DevPilot]` progress comment to your 
 
 ## Requirements
 
-- Claude Code with the following plugins installed:
-  - [`superpowers`](https://github.com/obra/superpowers) — provides the skills DevPilot orchestrates
-- The `mcp__azure-devops` MCP server configured in Claude Code
-- A git repository whose `origin` remote points to Azure DevOps
+| Dependency | Purpose | Install |
+|---|---|---|
+| [superpowers](https://github.com/obra/superpowers) | Provides the skills DevPilot orchestrates (brainstorming, TDD, code review, etc.) | See below |
+| [Azure DevOps MCP](https://github.com/microsoft/azure-devops-mcp) | Connects DevPilot to your Azure DevOps org (work items, repos, PRs) | See below |
+| Azure DevOps git remote | DevPilot parses your ADO org/project/repo from `origin` | — |
 
 ---
 
 ## Installation
 
-Clone this plugin into your Claude Code plugins directory:
+### 1. Install this plugin
 
 ```bash
 git clone https://github.com/<your-org>/superpowers-devpilot-plugin \
@@ -50,9 +51,65 @@ git clone https://github.com/<your-org>/superpowers-devpilot-plugin \
 
 Or add it to your Claude Code `settings.json` plugins list by path.
 
+### 2. Run the setup wizard
+
+Once the plugin is installed, open Claude Code and run:
+
+```
+/dev-setup
+```
+
+`/dev-setup` checks whether `superpowers` and the Azure DevOps MCP server are installed and walks you through installing any that are missing — including exact configuration steps and PAT scope requirements.
+
+> **Note:** `/dev-workitem` also checks prerequisites at startup and will prompt you to run `/dev-setup` if anything is missing.
+
+### Manual setup (if you prefer)
+
+**superpowers plugin:**
+```bash
+npm install -g @claude-plugins/superpowers
+# or: git clone https://github.com/obra/superpowers ~/.claude/plugins/superpowers
+```
+
+**Azure DevOps MCP:**
+```bash
+npm install -g @microsoft/azure-devops-mcp
+```
+
+Add to your Claude Code MCP configuration:
+```json
+{
+  "azure-devops": {
+    "command": "azure-devops-mcp",
+    "env": {
+      "AZURE_DEVOPS_ORG_URL": "https://dev.azure.com/your-org",
+      "AZURE_DEVOPS_AUTH_TYPE": "pat",
+      "AZURE_DEVOPS_TOKEN": "your-personal-access-token"
+    }
+  }
+}
+```
+
+Required PAT scopes: **Work Items** (Read & Write), **Code** (Read), **Pull Requests** (Read & Write).
+
 ---
 
 ## Commands
+
+### `/dev-setup`
+
+Checks whether all required dependencies are installed and guides you through installing any that are missing.
+
+Run this once after installing the plugin. It will:
+1. Detect whether `superpowers` and the Azure DevOps MCP server are present
+2. Show a status table (FOUND / MISSING) for each
+3. For any missing dependency, provide exact installation steps including PAT configuration
+
+```
+/dev-setup
+```
+
+---
 
 ### `/dev-workitem <workItemId>`
 
