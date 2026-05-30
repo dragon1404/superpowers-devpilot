@@ -57,22 +57,15 @@ Tell the developer:
 >
 > superpowers is a Claude Code plugin that provides the skills DevPilot uses at each workflow stage (design, planning, implementation, review, testing, PR).
 >
-> **Installation:**
+> **Installation — Official Marketplace (recommended):**
 >
-> **Option A — Install via npm (recommended):**
-> ```bash
-> npm install -g @claude-plugins/superpowers
+> Run this command in Claude Code:
 > ```
-> Then restart Claude Code.
->
-> **Option B — Install from source:**
-> ```bash
-> git clone https://github.com/obra/superpowers ~/.claude/plugins/superpowers
+> /plugin install superpowers@claude-plugins-official
 > ```
-> Then add the plugin path in Claude Code settings → Plugins.
 >
 > **Verify:**
-> After restarting Claude Code, run `/dev-setup` again to confirm the status shows FOUND.
+> After installation, run `/dev-setup` again to confirm the status shows FOUND.
 >
 > Repository: https://github.com/obra/superpowers
 

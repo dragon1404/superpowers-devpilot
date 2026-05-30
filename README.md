@@ -34,7 +34,7 @@ At each automated stage, DevPilot posts a `[DevPilot]` progress comment to your 
 
 | Dependency | Purpose | Install |
 |---|---|---|
-| [superpowers](https://github.com/obra/superpowers) | Provides the skills DevPilot orchestrates (brainstorming, TDD, code review, etc.) | See below |
+| [superpowers](https://github.com/obra/superpowers) | Provides the skills DevPilot orchestrates (brainstorming, TDD, code review, etc.) | `/plugin install superpowers@claude-plugins-official` |
 | [Azure DevOps MCP](https://github.com/microsoft/azure-devops-mcp) | Connects DevPilot to your Azure DevOps org (work items, repos, PRs) | See below |
 | Azure DevOps git remote | DevPilot parses your ADO org/project/repo from `origin` | — |
 
@@ -65,10 +65,9 @@ Once the plugin is installed, open Claude Code and run:
 
 ### Manual setup (if you prefer)
 
-**superpowers plugin:**
-```bash
-npm install -g @claude-plugins/superpowers
-# or: git clone https://github.com/obra/superpowers ~/.claude/plugins/superpowers
+**superpowers plugin** — install from the official Claude Code marketplace:
+```
+/plugin install superpowers@claude-plugins-official
 ```
 
 **Azure DevOps MCP:**
