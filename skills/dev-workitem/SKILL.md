@@ -82,7 +82,7 @@ Write `.devpilot/state/{workItemId}.json` with this exact structure (substitutin
   "adoOrg": "https://dev.azure.com/org",
   "adoProject": "Project",
   "adoRepo": "Repo",
-  "status": "LOADING",
+  "status": "DESIGNING",
   "designCompleted": false,
   "designApproved": false,
   "planCompleted": false,
@@ -102,13 +102,14 @@ Replace `0`, `"feature/0-slug"`, org/project/repo, and timestamp with the actual
 
 Call `mcp__azure-devops__wit_add_work_item_comment` with:
 - id: {workItemId}
-- text: `[DevPilot] Stage Started: Design`
+- text:
+  ```
+  [DevPilot] Stage Started: Design
+  ```
 
-## Step 8 — Update State to DESIGNING
+## Step 8 — Verify State File Written
 
-Update `.devpilot/state/{workItemId}.json`:
-- Set `status` to `"DESIGNING"`
-- Set `lastUpdated` to current ISO 8601 timestamp
+Confirm that `.devpilot/state/{workItemId}.json` was written successfully by checking it exists. The file was written with `status: "DESIGNING"` in Step 6.
 
 ## Step 9 — Run Design Stage
 
