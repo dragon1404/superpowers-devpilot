@@ -103,6 +103,17 @@ git commit -m "chore: devpilot state — waiting for plan approval on {workItemI
 
 ---
 
+## [STATUS: PLANNING]
+
+A crash occurred after design was approved but before the implementation plan was completed. Resume by continuing to **[STAGE 3: Implementation Plan]** step 3e above.
+
+Post ADO comment first:
+```
+[DevPilot] Resuming Implementation Plan generation
+```
+
+---
+
 ## [STATUS: WAITING_FOR_PLAN_APPROVAL]
 
 Running `/dev-resume` here means the developer has reviewed and approved the implementation plan.
@@ -223,7 +234,7 @@ git commit -m "chore: devpilot state — review complete for {workItemId}"
   [DevPilot] Stage Started: Testing
   ```
 
-**6b.** Invoke `superpowers:test-driven-development` using the Skill tool to verify test coverage against the acceptance criteria from the work item.
+**6b.** Invoke `superpowers:test-driven-development` using the Skill tool to run the full test suite and ensure all tests pass. If tests are missing for acceptance criteria, write them first using TDD, then verify all pass.
 
 **6c.** Write a testing report to `docs/testing/{workItemId}-testing.md`. The document must include:
 - Test execution results (pass/fail counts)
@@ -320,7 +331,7 @@ Post ADO comment:
 [DevPilot] Resuming Implementation
 ```
 
-Then continue from **[STAGE 4: Implementation]** step 4f above.
+Then continue from **[STAGE 4: Implementation]** step 4e above (re-post the Stage Started comment, then read the plan and re-invoke the implementation skill).
 
 ---
 
@@ -362,3 +373,11 @@ Then resume from **[STAGE 7: Pull Request]** step 7a above.
 This workflow is already complete.
 
 Tell the developer: "Work item {workItemId} workflow is already completed. PR: {prUrl}"
+
+---
+
+## [STATUS: UNKNOWN]
+
+If the `status` field does not match any of the sections above, stop and say:
+
+"The DevPilot state file for work item {workItemId} contains an unrecognized status: '{status}'. The state file may be corrupted. Check `.devpilot/state/{workItemId}.json` and correct the status field manually before retrying."
