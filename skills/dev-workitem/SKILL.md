@@ -31,7 +31,9 @@ Parse the Azure DevOps connection details from the URL using these patterns:
 
 Extract and store: `adoOrg`, `adoProject`, `adoRepo`.
 
-If the remote is not an Azure DevOps URL, stop and say: "This repository does not appear to be hosted on Azure DevOps. DevPilot requires an Azure DevOps git remote."
+If the command fails (non-zero exit code or no output), stop and say: "Could not read a git remote named 'origin'. Please ensure this repository has an Azure DevOps origin configured."
+
+If the remote URL does not match any Azure DevOps pattern, stop and say: "This repository does not appear to be hosted on Azure DevOps. DevPilot requires an Azure DevOps git remote."
 
 ## Step 4 — Fetch Work Item
 
@@ -110,9 +112,7 @@ Update `.devpilot/state/{workItemId}.json`:
 
 ## Step 9 — Run Design Stage
 
-Invoke `superpowers:brainstorming` using the Skill tool.
-
-Before invoking, pre-load the following as the project requirements context:
+Invoke `superpowers:brainstorming` using the Skill tool, passing the following block as the `args` parameter:
 
 > **Work Item {workItemId}: {title}**
 >
@@ -137,7 +137,11 @@ git commit -m "docs: add design document for work item {workItemId}"
 
 Call `mcp__azure-devops__wit_add_work_item_comment` with:
 - id: {workItemId}
-- text: `[DevPilot] Stage Completed: Design\nDocument: docs/design/{workItemId}-design.md`
+- text:
+  ```
+  [DevPilot] Stage Completed: Design
+  Document: docs/design/{workItemId}-design.md
+  ```
 
 ## Step 12 — Update State and Pause for Approval
 
