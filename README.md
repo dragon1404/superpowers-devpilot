@@ -46,8 +46,15 @@ At each automated stage, DevPilot posts a `[DevPilot]` progress comment to your 
 
 Add the marketplace and install in two commands:
 
+* Register the marketplace:
+
 ```
 /plugin marketplace add dragon1404/superpowers-devpilot
+```
+
+* Install the plugin from this marketplace:
+
+```
 /plugin install superpowers-devpilot@dragon-marketplace
 ```
 
