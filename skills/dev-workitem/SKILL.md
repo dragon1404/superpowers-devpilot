@@ -140,6 +140,11 @@ Call `mcp__azure-devops__wit_add_work_item_comment` with:
   [DevPilot] Stage Started: Design
   ```
 
+If the tool call fails, errors, or returns no result, **stop immediately** and say:
+> "[DevPilot] Could not post comment to Azure DevOps work item {workItemId}. Error: {error}. Check that the Azure DevOps MCP is connected and authenticated, then retry."
+
+Do not continue if this step fails.
+
 ## Step 8 — Verify State File Written
 
 Confirm that `.devpilot/state/{workItemId}.json` was written successfully by checking it exists. The file was written with `status: "DESIGNING"` in Step 6.
@@ -176,6 +181,9 @@ Call `mcp__azure-devops__wit_add_work_item_comment` with:
   [DevPilot] Stage Completed: Design
   Document: docs/design/{workItemId}-design.md
   ```
+
+If the tool call fails, errors, or returns no result, **stop immediately** and say:
+> "[DevPilot] Design stage completed but failed to post completion comment to Azure DevOps work item {workItemId}. Error: {error}. You may post the comment manually: '[DevPilot] Stage Completed: Design — Document: docs/design/{workItemId}-design.md'"
 
 ## Step 12 — Update State and Pause for Approval
 
