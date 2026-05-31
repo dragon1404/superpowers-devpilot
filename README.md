@@ -44,12 +44,18 @@ At each automated stage, DevPilot posts a `[DevPilot]` progress comment to your 
 
 ### 1. Install this plugin
 
-```bash
-git clone https://github.com/<your-org>/superpowers-devpilot-plugin \
-  ~/.claude/plugins/superpowers-devpilot
+Add the marketplace and install in two commands:
+
+```
+/plugin marketplace add dragon1404/superpowers-devpilot
+/plugin install superpowers-devpilot@dragon-marketplace
 ```
 
-Or add it to your Claude Code `settings.json` plugins list by path.
+Then reload plugins:
+
+```
+/reload-plugins
+```
 
 ### 2. Run the setup wizard
 
