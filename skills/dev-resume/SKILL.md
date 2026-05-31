@@ -49,7 +49,7 @@ git commit -m "chore: devpilot state — design approved for {workItemId}"
   [DevPilot] Design Approved — Starting Implementation Plan
   ```
 
-If the tool call fails or errors, **stop immediately** and say: "[DevPilot] Failed to post ADO comment. Error: {error}. Check Azure DevOps MCP connection."
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post 'Design Approved' comment — {error}. Continuing."
 
 **3d.** Continue to **[STAGE 3: Implementation Plan]** below.
 
@@ -64,7 +64,7 @@ If the tool call fails or errors, **stop immediately** and say: "[DevPilot] Fail
   [DevPilot] Stage Started: Implementation Plan
   ```
 
-If the tool call fails or errors, **stop immediately** and say: "[DevPilot] Failed to post ADO comment. Error: {error}. Check Azure DevOps MCP connection."
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post 'Implementation Plan Started' comment — {error}. Continuing."
 
 **3f.** Read the design document from `docs/design/{workItemId}-design.md`.
 
@@ -84,7 +84,7 @@ git commit -m "docs: add implementation plan for work item {workItemId}"
   Document: docs/plan/{workItemId}-plan.md
   ```
 
-If the tool call fails or errors, **stop immediately** and say: "[DevPilot] Implementation Plan stage done but failed to post ADO comment. Error: {error}."
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post 'Implementation Plan Completed' comment — {error}. Continuing."
 
 **3j.** Update `.devpilot/state/{workItemId}.json`:
 - Set `planCompleted` to `true`
@@ -142,7 +142,7 @@ git commit -m "chore: devpilot state — plan approved for {workItemId}"
   [DevPilot] Plan Approved — Starting Implementation
   ```
 
-If the tool call fails or errors, **stop immediately** and say: "[DevPilot] Failed to post ADO comment. Error: {error}. Check Azure DevOps MCP connection."
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post 'Plan Approved' comment — {error}. Continuing."
 
 **4d.** Continue to **[STAGE 4: Implementation]** below.
 
@@ -157,7 +157,7 @@ If the tool call fails or errors, **stop immediately** and say: "[DevPilot] Fail
   [DevPilot] Stage Started: Implementation
   ```
 
-If the tool call fails or errors, **stop immediately** and say: "[DevPilot] Failed to post ADO comment. Error: {error}. Check Azure DevOps MCP connection."
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post 'Implementation Started' comment — {error}. Continuing."
 
 **4f.** Read the plan from `docs/plan/{workItemId}-plan.md`.
 
@@ -172,7 +172,7 @@ Call `mcp__azure-devops__wit_add_work_item_comment`:
   [DevPilot] Stage Completed: Implementation
   ```
 
-If the tool call fails or errors, **stop immediately** and say: "[DevPilot] Implementation done but failed to post ADO comment. Error: {error}."
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post 'Implementation Completed' comment — {error}. Continuing."
 
 Update `.devpilot/state/{workItemId}.json`:
 - Set `implementationCompleted` to `true`
@@ -198,7 +198,7 @@ git commit -m "chore: devpilot state — implementation complete for {workItemId
   [DevPilot] Stage Started: Code Review
   ```
 
-If the tool call fails or errors, **stop immediately** and say: "[DevPilot] Failed to post ADO comment. Error: {error}. Check Azure DevOps MCP connection."
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post 'Code Review Started' comment — {error}. Continuing."
 
 **5b.** Invoke `superpowers:requesting-code-review` using the Skill tool for all files modified during implementation.
 
@@ -224,7 +224,7 @@ git commit -m "docs: add code review report for work item {workItemId}"
   Document: docs/review/{workItemId}-review.md
   ```
 
-If the tool call fails or errors, **stop immediately** and say: "[DevPilot] Code Review done but failed to post ADO comment. Error: {error}."
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post 'Code Review Completed' comment — {error}. Continuing."
 
 **5f.** Update `.devpilot/state/{workItemId}.json`:
 - Set `reviewCompleted` to `true`
@@ -250,7 +250,7 @@ git commit -m "chore: devpilot state — review complete for {workItemId}"
   [DevPilot] Stage Started: Testing
   ```
 
-If the tool call fails or errors, **stop immediately** and say: "[DevPilot] Failed to post ADO comment. Error: {error}. Check Azure DevOps MCP connection."
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post 'Testing Started' comment — {error}. Continuing."
 
 **6b.** Invoke `superpowers:test-driven-development` using the Skill tool to run the full test suite and ensure all tests pass. If tests are missing for acceptance criteria, write them first using TDD, then verify all pass.
 
@@ -274,7 +274,7 @@ git commit -m "docs: add testing report for work item {workItemId}"
   Document: docs/testing/{workItemId}-testing.md
   ```
 
-If the tool call fails or errors, **stop immediately** and say: "[DevPilot] Testing done but failed to post ADO comment. Error: {error}."
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post 'Testing Completed' comment — {error}. Continuing."
 
 **6f.** Update `.devpilot/state/{workItemId}.json`:
 - Set `testingCompleted` to `true`
@@ -300,7 +300,7 @@ git commit -m "chore: devpilot state — testing complete for {workItemId}"
   [DevPilot] Stage Started: Pull Request
   ```
 
-If the tool call fails or errors, **stop immediately** and say: "[DevPilot] Failed to post ADO comment. Error: {error}. Check Azure DevOps MCP connection."
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post 'Pull Request Started' comment — {error}. Continuing."
 
 **7b.** Invoke `superpowers:finishing-a-development-branch` using the Skill tool.
 
@@ -322,7 +322,7 @@ The PR must include:
   PR: {prUrl}
   ```
 
-If the tool call fails or errors, **stop immediately** and say: "[DevPilot] PR created but failed to post ADO comment. Error: {error}. PR URL: {prUrl}"
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post 'Pull Request Completed' comment — {error}. PR URL: {prUrl}"
 
 **7e.** Update `.devpilot/state/{workItemId}.json`:
 - Set `prCreated` to `true`
