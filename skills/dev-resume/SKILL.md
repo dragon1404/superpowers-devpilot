@@ -43,8 +43,8 @@ git commit -m "chore: devpilot state — design approved for {workItemId}"
 ```
 
 **3c.** Call `mcp__azure-devops__wit_add_work_item_comment`:
-- id: {workItemId}
-- text:
+- workItemId: {workItemId}
+- comment:
   ```
   [DevPilot] Design Approved — Starting Implementation Plan
   ```
@@ -58,8 +58,8 @@ If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilo
 ## [STAGE 3: Implementation Plan]
 
 **3e.** Call `mcp__azure-devops__wit_add_work_item_comment`:
-- id: {workItemId}
-- text:
+- workItemId: {workItemId}
+- comment:
   ```
   [DevPilot] Stage Started: Implementation Plan
   ```
@@ -77,8 +77,8 @@ git commit -m "docs: add implementation plan for work item {workItemId}"
 ```
 
 **3i.** Call `mcp__azure-devops__wit_add_work_item_comment`:
-- id: {workItemId}
-- text:
+- workItemId: {workItemId}
+- comment:
   ```
   [DevPilot] Stage Completed: Implementation Plan
   Document: docs/plan/{workItemId}-plan.md
@@ -136,8 +136,8 @@ git commit -m "chore: devpilot state — plan approved for {workItemId}"
 ```
 
 **4c.** Call `mcp__azure-devops__wit_add_work_item_comment`:
-- id: {workItemId}
-- text:
+- workItemId: {workItemId}
+- comment:
   ```
   [DevPilot] Plan Approved — Starting Implementation
   ```
@@ -151,8 +151,8 @@ If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilo
 ## [STAGE 4: Implementation]
 
 **4e.** Call `mcp__azure-devops__wit_add_work_item_comment`:
-- id: {workItemId}
-- text:
+- workItemId: {workItemId}
+- comment:
   ```
   [DevPilot] Stage Started: Implementation
   ```
@@ -166,8 +166,8 @@ If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilo
 **4h.** After implementation completes:
 
 Call `mcp__azure-devops__wit_add_work_item_comment`:
-- id: {workItemId}
-- text:
+- workItemId: {workItemId}
+- comment:
   ```
   [DevPilot] Stage Completed: Implementation
   ```
@@ -192,8 +192,8 @@ git commit -m "chore: devpilot state — implementation complete for {workItemId
 ## [STAGE 5: Code Review]
 
 **5a.** Call `mcp__azure-devops__wit_add_work_item_comment`:
-- id: {workItemId}
-- text:
+- workItemId: {workItemId}
+- comment:
   ```
   [DevPilot] Stage Started: Code Review
   ```
@@ -217,8 +217,8 @@ git commit -m "docs: add code review report for work item {workItemId}"
 ```
 
 **5e.** Call `mcp__azure-devops__wit_add_work_item_comment`:
-- id: {workItemId}
-- text:
+- workItemId: {workItemId}
+- comment:
   ```
   [DevPilot] Stage Completed: Code Review
   Document: docs/review/{workItemId}-review.md
@@ -244,8 +244,8 @@ git commit -m "chore: devpilot state — review complete for {workItemId}"
 ## [STAGE 6: Testing]
 
 **6a.** Call `mcp__azure-devops__wit_add_work_item_comment`:
-- id: {workItemId}
-- text:
+- workItemId: {workItemId}
+- comment:
   ```
   [DevPilot] Stage Started: Testing
   ```
@@ -267,8 +267,8 @@ git commit -m "docs: add testing report for work item {workItemId}"
 ```
 
 **6e.** Call `mcp__azure-devops__wit_add_work_item_comment`:
-- id: {workItemId}
-- text:
+- workItemId: {workItemId}
+- comment:
   ```
   [DevPilot] Stage Completed: Testing
   Document: docs/testing/{workItemId}-testing.md
@@ -294,8 +294,8 @@ git commit -m "chore: devpilot state — testing complete for {workItemId}"
 ## [STAGE 7: Pull Request]
 
 **7a.** Call `mcp__azure-devops__wit_add_work_item_comment`:
-- id: {workItemId}
-- text:
+- workItemId: {workItemId}
+- comment:
   ```
   [DevPilot] Stage Started: Pull Request
   ```
@@ -315,8 +315,8 @@ The PR must include:
 **7c.** After the PR is created, record the PR URL.
 
 **7d.** Call `mcp__azure-devops__wit_add_work_item_comment`:
-- id: {workItemId}
-- text:
+- workItemId: {workItemId}
+- comment:
   ```
   [DevPilot] Stage Completed: Pull Request
   PR: {prUrl}

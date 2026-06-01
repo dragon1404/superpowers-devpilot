@@ -134,8 +134,8 @@ Replace `0`, `"feature/0-slug"`, org/project/repo, and timestamp with the actual
 ## Step 7 — Post ADO Comment: Design Started
 
 Call `mcp__azure-devops__wit_add_work_item_comment` with:
-- id: {workItemId}
-- text:
+- workItemId: {workItemId}
+- comment:
   ```
   [DevPilot] Stage Started: Design
   ```
@@ -173,8 +173,8 @@ git commit -m "docs: add design document for work item {workItemId}"
 ## Step 11 — Post ADO Comment: Design Completed
 
 Call `mcp__azure-devops__wit_add_work_item_comment` with:
-- id: {workItemId}
-- text:
+- workItemId: {workItemId}
+- comment:
   ```
   [DevPilot] Stage Completed: Design
   Document: docs/design/{workItemId}-design.md
