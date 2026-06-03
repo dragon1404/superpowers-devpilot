@@ -85,6 +85,43 @@ Then continue to **[STAGE 2: Design]** below.
 
 **2b.** After brainstorming completes, verify that `docs/design/{workItemId}-design.md` exists.
 
+**2b2.** Review `docs/design/{workItemId}-design.md` for any open questions or unresolved assumptions that require a developer decision before the design can be finalised.
+
+If you identify any questions:
+
+1. Format them as a numbered list. For each question, include your own suggested answer.
+2. Commit the draft design:
+   ```bash
+   git add docs/design/{workItemId}-design.md
+   git commit -m "docs: add draft design document for work item {workItemId}"
+   ```
+3. Call `mcp__azure-devops__wit_add_work_item_comment` with:
+   - workItemId: {workItemId}
+   - comment:
+     ```
+     [DevPilot] Design Clarifications Needed
+
+     The following questions need answers before the design can be finalised. Suggested answers are provided — update the work item description with your decisions, then run `/dev-resume {workItemId}`.
+
+     {numbered list of questions with suggested answers}
+     ```
+4. Update `.devpilot/state/{workItemId}.json`:
+   - Set `status` to `"WAITING_FOR_DESIGN_CLARIFICATION"`
+   - Set `lastUpdated` to current ISO 8601 timestamp
+5. Commit:
+   ```bash
+   git add .devpilot/state/{workItemId}.json
+   git commit -m "chore: devpilot state — waiting for design clarification on {workItemId}"
+   ```
+6. Tell the developer:
+   > Design clarifications needed for work item {workItemId}.
+   >
+   > Questions have been posted as a comment on the ADO work item. Update the work item description with your decisions, then run `/dev-resume {workItemId}` to continue.
+
+   **STOP.**
+
+If you have no open questions, continue to **2c**.
+
 **2c.** Commit:
 ```bash
 git add docs/design/{workItemId}-design.md
@@ -165,39 +202,44 @@ If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilo
 
 **3f.** Read the design document from `docs/design/{workItemId}-design.md`.
 
-**3f2.** Review the design document and the current work item description for any ambiguities or missing decisions that would block a quality implementation plan.
+**3g.** Invoke `superpowers:writing-plans` using the Skill tool, passing the design document content as the `args` parameter. The plan must be saved to `docs/plan/{workItemId}-plan.md`.
+
+**3g2.** Review `docs/plan/{workItemId}-plan.md` for any open questions or unresolved assumptions that require a developer decision before implementation can begin.
 
 If you identify any questions:
 
-1. Format them as a numbered list. For each question, include your own suggested answer so the developer can quickly validate or correct it.
-2. Call `mcp__azure-devops__wit_add_work_item_comment` with:
+1. Format them as a numbered list. For each question, include your own suggested answer.
+2. Commit the draft plan:
+   ```bash
+   git add docs/plan/{workItemId}-plan.md
+   git commit -m "docs: add draft implementation plan for work item {workItemId}"
+   ```
+3. Call `mcp__azure-devops__wit_add_work_item_comment` with:
    - workItemId: {workItemId}
    - comment:
      ```
      [DevPilot] Plan Clarifications Needed
 
-     The following questions need answers before the implementation plan can be completed. Suggested answers are provided — update the work item description with any corrections, then run `/dev-resume {workItemId}`.
+     The following questions need answers before the plan can be finalised. Suggested answers are provided — update the work item description with your decisions, then run `/dev-resume {workItemId}`.
 
      {numbered list of questions with suggested answers}
      ```
-3. Update `.devpilot/state/{workItemId}.json`:
+4. Update `.devpilot/state/{workItemId}.json`:
    - Set `status` to `"WAITING_FOR_PLAN_CLARIFICATION"`
    - Set `lastUpdated` to current ISO 8601 timestamp
-4. Commit:
+5. Commit:
    ```bash
    git add .devpilot/state/{workItemId}.json
    git commit -m "chore: devpilot state — waiting for plan clarification on {workItemId}"
    ```
-5. Tell the developer:
+6. Tell the developer:
    > Plan clarifications needed for work item {workItemId}.
    >
    > Questions have been posted as a comment on the ADO work item. Update the work item description with your decisions, then run `/dev-resume {workItemId}` to continue.
 
    **STOP.**
 
-If you have no questions, continue to step 3g.
-
-**3g.** Invoke `superpowers:writing-plans` using the Skill tool, passing the design document content as the `args` parameter. The plan must be saved to `docs/plan/{workItemId}-plan.md`.
+If you have no open questions, continue to **3h**.
 
 **3h.** Commit:
 ```bash
