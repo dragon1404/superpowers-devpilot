@@ -105,21 +105,7 @@ Then tell the developer:
 > - **Code:** Read
 > - **Pull Requests:** Read & Write
 >
-> **Option A — Automatic (recommended):** Run this script in your terminal:
-> ```bash
-> read -p "ADO email: " ado_email && read -sp "ADO PAT: " ado_pat && echo && \
-> token=$(echo -n "$ado_email:$ado_pat" | base64) && \
-> python3 - <<EOF
-> import json, os
-> path = os.path.expanduser("~/.claude/settings.json")
-> cfg = json.load(open(path)) if os.path.exists(path) else {}
-> cfg.setdefault("env", {})["PERSONAL_ACCESS_TOKEN"] = "$token"
-> json.dump(cfg, open(path, "w"), indent=2)
-> print("✅ PERSONAL_ACCESS_TOKEN written to ~/.claude/settings.json")
-> EOF
-> ```
->
-> **Option B — Manual:** Edit `~/.claude/settings.json` and add:
+> Edit `~/.claude/settings.json` and add:
 > ```json
 > {
 >   "env": {
