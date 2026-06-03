@@ -147,6 +147,42 @@ If the tool call fails or errors, print a warning and continue:
 
 Confirm that `.devpilot/state/{workItemId}.json` was written successfully by checking it exists. The file was written with `status: "DESIGNING"` in Step 6.
 
+## Step 8b — Clarification Check: Design
+
+Before starting the design, review the work item title, description, and acceptance criteria for ambiguities, missing context, or concerns that would block a quality design.
+
+If you identify any questions:
+
+1. Format them as a numbered list. For each question, include your own suggested answer or assumption so the developer can quickly validate or correct it.
+2. Call `mcp__azure-devops__wit_add_work_item_comment` with:
+   - workItemId: {workItemId}
+   - comment:
+     ```
+     [DevPilot] Design Clarifications Needed
+
+     The following questions need answers before the design can be completed. Suggested answers are provided — update the work item description with any corrections, then run `/dev-resume {workItemId}`.
+
+     {numbered list of questions with suggested answers}
+     ```
+3. Update `.devpilot/state/{workItemId}.json`:
+   - Set `status` to `"WAITING_FOR_DESIGN_CLARIFICATION"`
+   - Set `lastUpdated` to current ISO 8601 timestamp
+4. Commit:
+   ```bash
+   git add .devpilot/state/{workItemId}.json
+   git commit -m "chore: devpilot state — waiting for design clarification on {workItemId}"
+   ```
+5. Tell the developer:
+   > Design clarifications needed for work item {workItemId}.
+   >
+   > Questions have been posted as a comment on the ADO work item. Update the work item description with your decisions, then run `/dev-resume {workItemId}` to continue.
+
+   **STOP.**
+
+If you have no questions and the work item provides sufficient context, continue to Step 9.
+
+---
+
 ## Step 9 — Run Design Stage
 
 Invoke `superpowers:brainstorming` using the Skill tool, passing the following block as the `args` parameter:

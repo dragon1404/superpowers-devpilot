@@ -27,6 +27,103 @@ Read the `status` field and jump to the matching section below.
 
 ---
 
+## [STATUS: WAITING_FOR_DESIGN_CLARIFICATION]
+
+The developer has updated the work item description with clarification answers. Re-read the work item and proceed to design.
+
+**Ca.** Call `mcp__azure-devops__wit_get_work_item` with id: {workItemId}. Read the updated title, description, and acceptance criteria.
+
+**Cb.** Call `mcp__azure-devops__wit_add_work_item_comment`:
+- workItemId: {workItemId}
+- comment:
+  ```
+  [DevPilot] Clarifications received — resuming Design stage
+  ```
+
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post clarification comment — {error}. Continuing."
+
+**Cc.** Update `.devpilot/state/{workItemId}.json`:
+- Set `status` to `"DESIGNING"`
+- Set `lastUpdated` to current ISO 8601 timestamp
+
+**Cd.** Commit:
+```bash
+git add .devpilot/state/{workItemId}.json
+git commit -m "chore: devpilot state — design clarifications received for {workItemId}"
+```
+
+**Ce.** Continue to **[STAGE 2: Design]** below.
+
+---
+
+## [STATUS: DESIGNING]
+
+Design was in progress when the session ended. Post ADO comment:
+```
+[DevPilot] Resuming Design stage
+```
+
+Re-fetch the work item (`mcp__azure-devops__wit_get_work_item` with id: {workItemId}) to get the latest title, description, and acceptance criteria.
+
+Then continue to **[STAGE 2: Design]** below.
+
+---
+
+## [STAGE 2: Design]
+
+**2a.** Invoke `superpowers:brainstorming` using the Skill tool, passing:
+
+> **Work Item {workItemId}: {title}**
+>
+> **Description:**
+> {description}
+>
+> **Acceptance Criteria:**
+> {acceptanceCriteria}
+>
+> **Instructions for brainstorming:** Treat this work item as the feature requirement. The design document must include: Work Item ID and title, assumptions, impacted modules, database impact, API impact, and testing impact. Save the design to `docs/design/{workItemId}-design.md`.
+
+**2b.** After brainstorming completes, verify that `docs/design/{workItemId}-design.md` exists.
+
+**2c.** Commit:
+```bash
+git add docs/design/{workItemId}-design.md
+git commit -m "docs: add design document for work item {workItemId}"
+```
+
+**2d.** Call `mcp__azure-devops__wit_add_work_item_comment`:
+- workItemId: {workItemId}
+- comment:
+  ```
+  [DevPilot] Stage Completed: Design
+  Document: docs/design/{workItemId}-design.md
+  ```
+
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post 'Design Completed' comment — {error}. Continuing."
+
+**2e.** Update `.devpilot/state/{workItemId}.json`:
+- Set `designCompleted` to `true`
+- Set `status` to `"WAITING_FOR_DESIGN_APPROVAL"`
+- Set `lastUpdated` to current ISO 8601 timestamp
+
+**2f.** Commit:
+```bash
+git add .devpilot/state/{workItemId}.json
+git commit -m "chore: devpilot state — waiting for design approval on {workItemId}"
+```
+
+**2g.** Tell the developer:
+
+> Design complete for work item {workItemId}.
+>
+> Review the design document at: `docs/design/{workItemId}-design.md`
+>
+> When you are satisfied with the design, run `/dev-resume {workItemId}` to approve it and continue to the Implementation Plan stage.
+
+**STOP — wait for developer to run `/dev-resume` again.**
+
+---
+
 ## [STATUS: WAITING_FOR_DESIGN_APPROVAL]
 
 Running `/dev-resume` here means the developer has reviewed and approved the design document.
@@ -68,6 +165,38 @@ If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilo
 
 **3f.** Read the design document from `docs/design/{workItemId}-design.md`.
 
+**3f2.** Review the design document and the current work item description for any ambiguities or missing decisions that would block a quality implementation plan.
+
+If you identify any questions:
+
+1. Format them as a numbered list. For each question, include your own suggested answer so the developer can quickly validate or correct it.
+2. Call `mcp__azure-devops__wit_add_work_item_comment` with:
+   - workItemId: {workItemId}
+   - comment:
+     ```
+     [DevPilot] Plan Clarifications Needed
+
+     The following questions need answers before the implementation plan can be completed. Suggested answers are provided — update the work item description with any corrections, then run `/dev-resume {workItemId}`.
+
+     {numbered list of questions with suggested answers}
+     ```
+3. Update `.devpilot/state/{workItemId}.json`:
+   - Set `status` to `"WAITING_FOR_PLAN_CLARIFICATION"`
+   - Set `lastUpdated` to current ISO 8601 timestamp
+4. Commit:
+   ```bash
+   git add .devpilot/state/{workItemId}.json
+   git commit -m "chore: devpilot state — waiting for plan clarification on {workItemId}"
+   ```
+5. Tell the developer:
+   > Plan clarifications needed for work item {workItemId}.
+   >
+   > Questions have been posted as a comment on the ADO work item. Update the work item description with your decisions, then run `/dev-resume {workItemId}` to continue.
+
+   **STOP.**
+
+If you have no questions, continue to step 3g.
+
 **3g.** Invoke `superpowers:writing-plans` using the Skill tool, passing the design document content as the `args` parameter. The plan must be saved to `docs/plan/{workItemId}-plan.md`.
 
 **3h.** Commit:
@@ -106,6 +235,35 @@ git commit -m "chore: devpilot state — waiting for plan approval on {workItemI
 > When you are satisfied with the plan, run `/dev-resume {workItemId}` to approve it and begin implementation.
 
 **STOP — wait for developer to run `/dev-resume` again.**
+
+---
+
+## [STATUS: WAITING_FOR_PLAN_CLARIFICATION]
+
+The developer has updated the work item description with plan clarification answers. Re-read the work item and proceed to planning.
+
+**Pa.** Call `mcp__azure-devops__wit_get_work_item` with id: {workItemId}. Read the updated description.
+
+**Pb.** Call `mcp__azure-devops__wit_add_work_item_comment`:
+- workItemId: {workItemId}
+- comment:
+  ```
+  [DevPilot] Clarifications received — resuming Implementation Plan stage
+  ```
+
+If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post clarification comment — {error}. Continuing."
+
+**Pc.** Update `.devpilot/state/{workItemId}.json`:
+- Set `status` to `"PLANNING"`
+- Set `lastUpdated` to current ISO 8601 timestamp
+
+**Pd.** Commit:
+```bash
+git add .devpilot/state/{workItemId}.json
+git commit -m "chore: devpilot state — plan clarifications received for {workItemId}"
+```
+
+**Pe.** Continue to **[STAGE 3: Implementation Plan]** step 3e above.
 
 ---
 
