@@ -21,6 +21,15 @@ If the file does not exist, stop and say: "No DevPilot workflow found for work i
 
 Store all fields from the state file for use in subsequent steps.
 
+## Step 2b — Surface Worktree Path
+
+If `worktreePath` is not null, tell the developer:
+
+> This workflow has a git worktree at: `{worktreePath}`
+> Ensure you are running from that directory before continuing.
+
+If `worktreePath` is null, continue without comment.
+
 ## Step 3 — Branch on Status
 
 Read the `status` field and jump to the matching section below.

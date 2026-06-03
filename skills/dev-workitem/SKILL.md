@@ -102,6 +102,25 @@ If branch already exists (exit code non-zero), run:
 git checkout feature/{workItemId}-{slug}
 ```
 
+## Step 5b — Detect Worktree
+
+Run:
+```bash
+git rev-parse --git-dir
+```
+
+If the output contains `/worktrees/`, the current directory is a git worktree. Get its path:
+```bash
+git rev-parse --show-toplevel
+```
+Store the result as `worktreePath`.
+
+If not inside a worktree, check whether one exists for the feature branch:
+```bash
+git worktree list --porcelain
+```
+Find any entry whose `branch` line matches `refs/heads/feature/{workItemId}-{slug}`. If found, store its `worktree` path as `worktreePath`. Otherwise set `worktreePath` to `null`.
+
 ## Step 6 — Initialize State File
 
 Create directory: `.devpilot/state/`
@@ -112,6 +131,7 @@ Write `.devpilot/state/{workItemId}.json` with this exact structure (substitutin
 {
   "workItemId": 0,
   "branch": "feature/0-slug",
+  "worktreePath": null,
   "adoOrg": "https://dev.azure.com/org",
   "adoProject": "Project",
   "adoRepo": "Repo",
@@ -129,7 +149,7 @@ Write `.devpilot/state/{workItemId}.json` with this exact structure (substitutin
 }
 ```
 
-Replace `0`, `"feature/0-slug"`, org/project/repo, and timestamp with the actual values. Use ISO 8601 format for `lastUpdated`.
+Replace `0`, `"feature/0-slug"`, `worktreePath`, org/project/repo, and timestamp with actual values. Use ISO 8601 format for `lastUpdated`. Set `worktreePath` to the path string from Step 5b, or `null` if none was found.
 
 ## Step 7 — Post ADO Comment: Design Started
 
