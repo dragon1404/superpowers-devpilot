@@ -1,6 +1,6 @@
 ---
 name: dev-fix-pipeline
-description: "Check a failed CI pipeline linked to a PR and automatically fix the errors. Usage: /dev-fix-pipeline <workItemId>"
+description: "Investigate a failed CI pipeline on an open PR and automatically fix the error. Usage: /dev-fix-pipeline <workItemId>"
 ---
 
 # DevPilot: Fix Pipeline Failure
@@ -21,56 +21,96 @@ Read `.devpilot/state/{workItemId}.json`.
 
 If the file does not exist, stop and say: "No DevPilot workflow found for work item {workItemId}. Start one with `/dev-workitem {workItemId}`."
 
-Store: `branch`, `adoOrg`, `adoProject`, `adoRepo`, `prUrl`.
+Store all fields. Note `branch`, `adoOrg`, `adoProject`, `adoRepo`, `prCreated`, and `pipelineFixCount` (treat as 0 if missing).
 
-If `prUrl` is null, stop and say: "No PR has been created for work item {workItemId} yet. The pipeline check requires an open PR. Run `/dev-resume {workItemId}` to complete the workflow first."
+## Step 3 — Precondition Checks
 
-## Step 3 — Find the Failed Build
+**Check 1 — PR must be open:**
+If `prCreated` is not `true`, stop and say:
+> "Work item {workItemId} does not have an open PR yet. `/dev-fix-pipeline` only works after the PR is created. Run `/dev-resume {workItemId}` to complete the workflow first."
+
+**Check 2 — Branch match:**
+Run:
+```bash
+git rev-parse --abbrev-ref HEAD
+```
+If the result does not match `{branch}` from the state file, stop and say:
+> "You are on branch `{current branch}` but work item {workItemId} is on `{branch}`. Switch to the correct branch before running this command."
+
+## Step 4 — Find Latest Build
 
 Call `mcp__azure-devops__pipelines_get_builds` with:
 - project: {adoProject}
 - branchName: `refs/heads/{branch}`
-- statusFilter: `failed`
-- top: 3
+- top: 1
 
-Find the most recent failed build. Store its `id` as `buildId` and `buildNumber`.
+If no results are returned, call `mcp__azure-devops__pipelines_list_runs` for the same branch to cover YAML pipelines. Take the most recent run.
 
-If no results are returned, try `mcp__azure-devops__pipelines_list_runs` for the same branch to check YAML pipeline runs. Look for any run with `result: failed`.
+If still no results, stop and say: "No pipeline builds found for branch `{branch}`."
 
-If no failed build is found at all, stop and say: "No failed builds found for branch `{branch}`. The pipeline may still be running, or it may have already passed."
+Store the result as `latestBuild`. Record its `id` as `buildId` and `buildNumber`.
 
-## Step 4 — Get the Build Logs
+## Step 5 — Check Build Status
+
+Read the `status` and `result` fields of `latestBuild`:
+
+- **Failed / partially succeeded** → continue to Step 6
+- **In progress / queued / not started** → stop and say: "The latest build ({buildNumber}) is still running. Wait for it to complete, then retry."
+- **Succeeded / any other non-failed status** → stop and say: "The latest build ({buildNumber}) passed. No pipeline failure found on branch `{branch}`."
+
+## Step 6 — Get Build Log
 
 Call `mcp__azure-devops__pipelines_get_build_log` with:
 - project: {adoProject}
 - buildId: {buildId}
 
-Read the log and identify:
-- The step or task that failed
-- The specific error message(s)
-- Any file paths and line numbers referenced in the error
+If the top-level log does not contain actionable error detail, call `mcp__azure-devops__pipelines_get_build_log_by_id` for each failed timeline record to get granular output.
 
-If the top-level log lacks detail, call `mcp__azure-devops__pipelines_get_build_log_by_id` for each failed timeline record to get granular output.
+Extract and store:
+- `failingStep` — name of the step or task that failed
+- `errorMessages` — the specific error message(s)
+- `errorLocations` — file paths and line numbers referenced in the error (if any)
+- `errorSummary` — 1–3 sentence summary of what failed and why
 
-Store a concise `errorSummary` (1–3 sentences describing what failed and why).
+## Step 7 — Classify Failure
 
-## Step 5 — Post ADO Comment: Investigating
+Classify using the extracted log details:
 
-Call `mcp__azure-devops__wit_add_work_item_comment` with:
+**Automatable** — the error points directly at code that can be changed:
+- Compile error (syntax error, type mismatch, missing import)
+- Test assertion failure
+- Lint or formatting violation
+- Missing file referenced in code
+
+**Not automatable** — the error is environmental or infrastructural:
+- Missing secret or environment variable
+- Pipeline agent offline or unavailable
+- Network timeout or DNS failure
+- Permission denied on infrastructure resource
+- External dependency down
+
+If **not automatable**, call `mcp__azure-devops__wit_add_work_item_comment` with:
 - workItemId: {workItemId}
 - comment:
   ```
-  [DevPilot] Investigating pipeline failure
+  [DevPilot] Pipeline failure requires manual intervention
 
   Build: {buildId} ({buildNumber})
+  Step: {failingStep}
   Error: {errorSummary}
+
+  This failure cannot be automatically fixed (infrastructure/configuration issue).
   ```
 
-If the tool call fails, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post investigating comment — {error}. Continuing."
+If the tool call fails, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post comment — {error}. Continuing."
 
-## Step 6 — Fix the Error
+Then stop and tell the developer what was found.
 
-Invoke `superpowers:systematic-debugging` using the Skill tool, passing the following as context:
+If **automatable**, continue to Step 8.
+
+## Step 8 — Fix with systematic-debugging
+
+Invoke `superpowers:systematic-debugging` using the Skill tool, passing:
 
 > **Pipeline failure on work item {workItemId}**
 >
@@ -78,33 +118,104 @@ Invoke `superpowers:systematic-debugging` using the Skill tool, passing the foll
 >
 > **Build:** {buildId} ({buildNumber})
 >
+> **Failing step:** {failingStep}
+>
 > **Error:**
 > {errorSummary}
 >
 > **Relevant log output:**
-> {key failing log lines, trimmed to what is actionable}
+> {errorMessages and errorLocations, trimmed to what is actionable}
 >
-> Diagnose the root cause and fix it. Do not modify code unrelated to the failure.
+> Diagnose the root cause and fix it. Touch only files directly related to the failure. Do not modify unrelated code.
 
-## Step 7 — Commit and Push the Fix
+## Step 9 — Check for Changes
 
-Stage only the files that were modified during the fix:
-
+After the debugging skill completes, run:
 ```bash
 git diff --name-only
 ```
 
-Stage and commit those files:
+If the output is empty (no files were modified), call `mcp__azure-devops__wit_add_work_item_comment` with:
+- workItemId: {workItemId}
+- comment:
+  ```
+  [DevPilot] Pipeline fix attempted but no change could be determined
+
+  Build: {buildId} ({buildNumber})
+  Error: {errorSummary}
+
+  The failure was identified as automatable but no code change could be determined. Manual investigation required.
+  ```
+
+If the tool call fails, print a warning and continue. Then stop and tell the developer.
+
+If files were modified, store the list as `changedFiles` and continue to Step 10.
+
+## Step 10 — Local Verification
+
+**Step 10a — Attempt test run:**
+
+Identify test files related to `changedFiles` (same module, same directory, or files whose names include the changed file's base name). Run those tests.
+
+Evaluate the result:
+- **Tests pass** → proceed to Step 10b
+- **Tests fail with sandbox restrictions** (connection refused, network unreachable, service unavailable, external environment variable missing) → skip to Step 10b; note verification mode as `build-only`
+- **Tests fail with actual failures** (assertion errors, wrong output, unexpected business-logic exceptions) → call `mcp__azure-devops__wit_add_work_item_comment`:
+  ```
+  [DevPilot] Pipeline fix attempted but local verification failed
+
+  Build: {buildId} ({buildNumber})
+  Files changed: {changedFiles}
+  Verification failure: tests failed locally after the fix
+  Details: {test failure output}
+  ```
+  If the tool call fails, warn and continue. Then stop and tell the developer.
+
+**Step 10b — Build check:**
+
+Run the project build command.
+
+- **Build passes** → continue to Step 11
+- **Build fails** → call `mcp__azure-devops__wit_add_work_item_comment`:
+  ```
+  [DevPilot] Pipeline fix attempted but local verification failed
+
+  Build: {buildId} ({buildNumber})
+  Files changed: {changedFiles}
+  Verification failure: build failed locally after the fix
+  Details: {build error output}
+  ```
+  If the tool call fails, warn and continue. Then stop and tell the developer.
+
+## Step 11 — Push the Fix
+
+Stage and commit only `changedFiles`:
 
 ```bash
-git add <changed files>
-git commit -m "fix: resolve pipeline failure for work item {workItemId}
-
-{one-line description of what was fixed}"
+git add {changedFiles}
+git commit -m "fix: resolve pipeline failure for work item {workItemId} — {one-line summary of what was fixed}"
 git push
 ```
 
-## Step 8 — Post ADO Comment: Fix Applied
+## Step 12 — Update State File
+
+Read `.devpilot/state/{workItemId}.json`. Update:
+- `pipelineFixCount`: increment by 1 (set to 1 if field was missing)
+- `lastPipelineFixAt`: current ISO 8601 timestamp
+- `lastUpdated`: current ISO 8601 timestamp
+
+Write the updated state file back, then commit:
+
+```bash
+git add .devpilot/state/{workItemId}.json
+git commit -m "chore: devpilot state — pipeline fix #{pipelineFixCount} applied for {workItemId}"
+```
+
+## Step 13 — Post ADO Comment: Fix Applied
+
+Determine the verification label:
+- Tests ran and passed → `tests passed`
+- Tests sandbox-skipped → `build-only (tests skipped — sandbox restrictions)`
 
 Call `mcp__azure-devops__wit_add_work_item_comment` with:
 - workItemId: {workItemId}
@@ -112,24 +223,27 @@ Call `mcp__azure-devops__wit_add_work_item_comment` with:
   ```
   [DevPilot] Pipeline fix applied
 
+  Build: {buildId} ({buildNumber})
   Error: {errorSummary}
-  Fix: {brief description of the change}
-  Branch: {branch}
+  Fix: {brief description of what changed}
+  Files changed: {changedFiles}
+  Verification: {tests passed | build-only (tests skipped — sandbox restrictions)}
 
-  The fix has been pushed. The pipeline should re-run automatically on the PR.
+  The fix has been pushed to `{branch}`. The pipeline should re-run automatically.
   If it fails again, run `/dev-fix-pipeline {workItemId}` to retry.
   ```
 
 If the tool call fails, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post fix comment — {error}. Continuing."
 
-## Step 9 — Report to Developer
+## Step 14 — Report to Developer
 
 Tell the developer:
 
-> Pipeline fix applied for work item {workItemId}.
+> Pipeline fix #{pipelineFixCount} applied for work item {workItemId}.
 >
 > **Error:** {errorSummary}
-> **Fix:** {brief description of the change}
+> **Files changed:** {changedFiles}
+> **Verification:** {tests passed | build-only}
 >
 > The fix has been pushed to `{branch}`. Monitor the pipeline to confirm it passes.
 > If it fails again, run `/dev-fix-pipeline {workItemId}` to retry.
