@@ -145,11 +145,13 @@ Write `.devpilot/state/{workItemId}.json` with this exact structure (substitutin
   "testingCompleted": false,
   "prCreated": false,
   "prUrl": null,
+  "pipelineFixCount": 0,
+  "lastPipelineFixAt": null,
   "lastUpdated": "2026-01-01T00:00:00Z"
 }
 ```
 
-Replace `0`, `"feature/0-slug"`, `worktreePath`, org/project/repo, and timestamp with actual values. Use ISO 8601 format for `lastUpdated`. Set `worktreePath` to the path string from Step 5b, or `null` if none was found.
+Replace `0`, `"feature/0-slug"`, `worktreePath`, org/project/repo, and timestamp with actual values. Use ISO 8601 format for `lastUpdated`. Set `worktreePath` to the path string from Step 5b, or `null` if none was found. `pipelineFixCount` starts at `0` and `lastPipelineFixAt` starts as `null` — do not change these initial values.
 
 ## Step 7 — Post ADO Comment: Design Started
 
