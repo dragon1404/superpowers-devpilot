@@ -24,6 +24,9 @@ DevPilot orchestrates the full development workflow for a single Azure DevOps wo
   ├─ Stage 5: Code review (automated)
   ├─ Stage 6: Testing (automated)
   └─ Stage 7: Pull request (automated)
+
+/dev-fix-pipeline <id>  (if pipeline fails on the PR)
+  └─ Diagnose & fix CI failure, push fix, re-trigger pipeline
 ```
 
 At each automated stage, DevPilot posts a `[DevPilot]` progress comment to your Azure DevOps work item, commits artifacts to a feature branch, and updates a local state file so the workflow can be resumed at any time.
@@ -337,6 +340,29 @@ DevPilot requires the `superpowers` plugin and uses these skills:
 | `superpowers:requesting-code-review` | Stage 5 — Code review |
 | `superpowers:test-driven-development` | Stage 6 — Testing |
 | `superpowers:finishing-a-development-branch` | Stage 7 — Pull request |
+| `superpowers:systematic-debugging` | `/dev-fix-pipeline` — Pipeline failure fix |
+
+---
+
+### `/dev-fix-pipeline <workItemId>`
+
+Investigates a failed CI pipeline on the PR for the given work item and automatically applies a fix.
+
+**What it does:**
+1. Reads the state file to get the branch and PR details
+2. Finds the most recent failed build for the feature branch
+3. Fetches the build logs and identifies the root cause
+4. Posts a `[DevPilot] Investigating pipeline failure` comment to the work item
+5. Invokes `superpowers:systematic-debugging` to diagnose and fix the error
+6. Commits and pushes the fix to the feature branch
+7. Posts a `[DevPilot] Pipeline fix applied` comment with a summary of the change
+
+**Example:**
+```
+/dev-fix-pipeline 21238
+```
+
+If the pipeline fails again after the fix, run the same command to retry.
 
 ---
 
