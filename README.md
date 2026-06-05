@@ -205,6 +205,8 @@ DevPilot persists workflow state at `.devpilot/state/<workItemId>.json`:
   "testingCompleted": false,
   "prCreated": false,
   "prUrl": null,
+  "pipelineFixCount": 0,
+  "lastPipelineFixAt": null,
   "lastUpdated": "2026-05-30T10:00:00Z"
 }
 ```
@@ -349,20 +351,22 @@ DevPilot requires the `superpowers` plugin and uses these skills:
 Investigates a failed CI pipeline on the PR for the given work item and automatically applies a fix.
 
 **What it does:**
-1. Reads the state file to get the branch and PR details
-2. Finds the most recent failed build for the feature branch
-3. Fetches the build logs and identifies the root cause
-4. Posts a `[DevPilot] Investigating pipeline failure` comment to the work item
-5. Invokes `superpowers:systematic-debugging` to diagnose and fix the error
-6. Commits and pushes the fix to the feature branch
-7. Posts a `[DevPilot] Pipeline fix applied` comment with a summary of the change
+1. Checks preconditions: state file exists, PR is open (`prCreated: true`), current branch matches
+2. Fetches the latest pipeline build for the feature branch (classic or YAML)
+3. If the build is not failed, stops with a status message — no action taken
+4. Retrieves the build log and classifies the failure as automatable or not
+5. If not automatable (infra/secrets/config): posts analysis to the work item and stops
+6. Invokes `superpowers:systematic-debugging` to diagnose and fix the error
+7. If no files were changed by debugging, posts findings to the work item and stops
+8. Runs affected tests locally; if sandbox-restricted, falls back to build-only verification
+9. If verification fails, posts details to the work item and stops without pushing
+10. Commits and pushes the fix; updates the state file (`pipelineFixCount`, `lastPipelineFixAt`)
+11. Posts `[DevPilot] Pipeline fix applied` to the work item with error summary and verification result
 
 **Example:**
 ```
 /dev-fix-pipeline 21238
 ```
-
-If the pipeline fails again after the fix, run the same command to retry.
 
 ---
 
