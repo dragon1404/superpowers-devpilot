@@ -34,8 +34,10 @@ Run:
 ```bash
 git rev-parse --abbrev-ref HEAD
 ```
-If the result does not match `{branch}` from the state file, stop and say:
-> "You are on branch `{current branch}` but work item {workItemId} is on `{branch}`. Switch to the correct branch before running this command."
+Store the result as `currentBranch`.
+
+If `currentBranch` does not match `{branch}` from the state file, stop and say:
+> "You are on branch `{currentBranch}` but work item {workItemId} is on `{branch}`. Switch to the correct branch before running this command."
 
 ## Step 4 — Find Latest Build
 
@@ -102,9 +104,7 @@ If **not automatable**, call `mcp__azure-devops__wit_add_work_item_comment` with
   This failure cannot be automatically fixed (infrastructure/configuration issue).
   ```
 
-If the tool call fails, print a warning and continue: "⚠️ [DevPilot] Warning: Could not post comment — {error}. Continuing."
-
-Then stop and tell the developer what was found.
+If the tool call fails, print a warning: "⚠️ [DevPilot] Warning: Could not post 'manual intervention' comment to work item {workItemId} — {error}." Then stop and tell the developer what was found.
 
 If **automatable**, continue to Step 8.
 
@@ -147,7 +147,7 @@ If the output is empty (no files were modified), call `mcp__azure-devops__wit_ad
   The failure was identified as automatable but no code change could be determined. Manual investigation required.
   ```
 
-If the tool call fails, print a warning and continue. Then stop and tell the developer.
+If the tool call fails, print a warning: `⚠️ [DevPilot] Warning: Could not post 'no change' comment to work item {workItemId} — {error}.` Then stop and tell the developer.
 
 If files were modified, store the list as `changedFiles` and continue to Step 10.
 
@@ -156,6 +156,8 @@ If files were modified, store the list as `changedFiles` and continue to Step 10
 **Step 10a — Attempt test run:**
 
 Identify test files related to `changedFiles` (same module, same directory, or files whose names include the changed file's base name). Run those tests.
+
+If no related test files can be identified, skip the test run and set verification mode to `build-only`.
 
 Evaluate the result:
 - **Tests pass** → proceed to Step 10b
@@ -175,6 +177,8 @@ Evaluate the result:
 
 Run the project build command.
 
+If no build command can be determined for this project type (no package.json, Makefile, .csproj, or equivalent), skip the build check and treat verification as passing — proceed to Step 11.
+
 - **Build passes** → continue to Step 11
 - **Build fails** → call `mcp__azure-devops__wit_add_work_item_comment`:
   ```
@@ -191,8 +195,13 @@ Run the project build command.
 
 Stage and commit only `changedFiles`:
 
+Stage each file in `changedFiles` individually. For example, if `changedFiles` contains `src/foo.ts` and `src/bar.ts`, run:
 ```bash
-git add {changedFiles}
+git add src/foo.ts src/bar.ts
+```
+(Expand `changedFiles` as space-separated arguments to `git add`.)
+
+```bash
 git commit -m "fix: resolve pipeline failure for work item {workItemId} — {one-line summary of what was fixed}"
 git push
 ```
@@ -204,11 +213,14 @@ Read `.devpilot/state/{workItemId}.json`. Update:
 - `lastPipelineFixAt`: current ISO 8601 timestamp
 - `lastUpdated`: current ISO 8601 timestamp
 
-Write the updated state file back, then commit:
+Update your in-memory `pipelineFixCount` to this new value before continuing — subsequent steps use the updated count.
+
+Write the updated state file back, then commit and push:
 
 ```bash
 git add .devpilot/state/{workItemId}.json
 git commit -m "chore: devpilot state — pipeline fix #{pipelineFixCount} applied for {workItemId}"
+git push
 ```
 
 ## Step 13 — Post ADO Comment: Fix Applied
@@ -227,7 +239,7 @@ Call `mcp__azure-devops__wit_add_work_item_comment` with:
   Error: {errorSummary}
   Fix: {brief description of what changed}
   Files changed: {changedFiles}
-  Verification: {tests passed | build-only (tests skipped — sandbox restrictions)}
+  Verification: {verification label from Step 13}
 
   The fix has been pushed to `{branch}`. The pipeline should re-run automatically.
   If it fails again, run `/dev-fix-pipeline {workItemId}` to retry.
@@ -243,7 +255,7 @@ Tell the developer:
 >
 > **Error:** {errorSummary}
 > **Files changed:** {changedFiles}
-> **Verification:** {tests passed | build-only}
+> **Verification:** {verification label from Step 13}
 >
 > The fix has been pushed to `{branch}`. Monitor the pipeline to confirm it passes.
 > If it fails again, run `/dev-fix-pipeline {workItemId}` to retry.
