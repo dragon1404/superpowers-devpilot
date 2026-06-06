@@ -123,10 +123,11 @@ Starts a new DevPilot workflow for the given Azure DevOps work item.
 2. Fetches the work item (title, description, acceptance criteria, linked items)
 3. Creates a feature branch: `feature/<workItemId>-<title-slug>`
 4. Initialises a state file at `.devpilot/state/<workItemId>.json`
-5. Runs `superpowers:brainstorming` with the work item as requirements context
-6. Saves the design to `docs/design/<workItemId>-design.md` and commits it
-7. Posts `[DevPilot] Stage Completed: Design` to the work item
-8. Pauses and prompts you to review the design
+5. Runs `superpowers:brainstorming` to produce a design document
+6. Reviews the design for unresolved questions — if any, posts them to the work item and pauses for your input (`WAITING_FOR_DESIGN_CLARIFICATION`)
+7. Saves the design to `docs/design/<workItemId>-design.md` and commits it
+8. Posts `[DevPilot] Stage Completed: Design` to the work item
+9. Pauses and prompts you to review the design
 
 **Example:**
 ```
@@ -141,12 +142,40 @@ Resumes the workflow from the last completed stage.
 
 **At an approval gate** (`WAITING_FOR_DESIGN_APPROVAL` or `WAITING_FOR_PLAN_APPROVAL`), running `/dev-resume` **is** the approval — it advances the workflow automatically.
 
+**At a clarification checkpoint** (`WAITING_FOR_DESIGN_CLARIFICATION` or `WAITING_FOR_PLAN_CLARIFICATION`), update the work item description in Azure DevOps with your answers, then run `/dev-resume` to continue. DevPilot re-fetches the updated description before resuming.
+
 **After an interruption**, it detects the current state and picks up exactly where it left off.
 
 **Example:**
 ```
 /dev-resume 21238
 ```
+
+---
+
+### `/dev-fix-pipeline <workItemId>`
+
+Investigates a failed CI pipeline on the PR for the given work item and automatically applies a fix.
+
+**What it does:**
+1. Checks preconditions: state file exists, PR is open (`prCreated: true`), current branch matches
+2. Fetches the latest pipeline build for the feature branch (classic or YAML)
+3. If the build is not failed, stops with a status message — no action taken
+4. Retrieves the build log and classifies the failure as automatable or not
+5. If not automatable (infra/secrets/config): posts analysis to the work item and stops
+6. Invokes `superpowers:systematic-debugging` to diagnose and fix the error
+7. If no files were changed by debugging, posts findings to the work item and stops
+8. Runs affected tests locally; if sandbox-restricted, falls back to build-only verification
+9. If verification fails, posts details to the work item and stops without pushing
+10. Commits and pushes the fix; updates the state file (`pipelineFixCount`, `lastPipelineFixAt`)
+11. Posts `[DevPilot] Pipeline fix applied` to the work item with error summary and verification result
+
+**Example:**
+```
+/dev-fix-pipeline 21238
+```
+
+If the pipeline fails again after the fix, run the same command to retry.
 
 ---
 
@@ -166,7 +195,7 @@ Resumes the workflow from the last completed stage.
 
 ## Approval Gates
 
-There are exactly two human checkpoints:
+There are exactly two human approval checkpoints, plus optional clarification checkpoints.
 
 **Gate 1 — Design**
 
@@ -182,6 +211,13 @@ After Stage 3, DevPilot pauses with:
 
 Review the plan. When satisfied, run `/dev-resume <id>` to kick off automated implementation through to PR.
 
+**Clarification checkpoints (conditional)**
+
+After brainstorming or writing-plans, if unresolved questions are found, DevPilot posts them as a numbered ADO comment with suggested answers and pauses:
+> *"Design clarifications needed. Questions posted to ADO work item. Update the description with your decisions, then run `/dev-resume <id>`."*
+
+Update the work item description in Azure DevOps with your answers, then run `/dev-resume <id>`. DevPilot re-fetches the updated description before continuing. If no questions arise, this checkpoint is skipped automatically.
+
 ---
 
 ## State File
@@ -192,6 +228,7 @@ DevPilot persists workflow state at `.devpilot/state/<workItemId>.json`:
 {
   "workItemId": 21238,
   "branch": "feature/21238-add-payment-gateway",
+  "worktreePath": null,
   "adoOrg": "https://dev.azure.com/myorg",
   "adoProject": "MyProject",
   "adoRepo": "MyRepo",
@@ -216,9 +253,11 @@ DevPilot persists workflow state at `.devpilot/state/<workItemId>.json`:
 | Status | Meaning |
 |--------|---------|
 | `DESIGNING` | Stage 2 in progress |
-| `WAITING_FOR_DESIGN_APPROVAL` | Paused — awaiting `/dev-resume` |
+| `WAITING_FOR_DESIGN_CLARIFICATION` | Paused — questions posted to ADO, awaiting answers in work item description |
+| `WAITING_FOR_DESIGN_APPROVAL` | Paused — awaiting `/dev-resume` to approve design |
 | `PLANNING` | Stage 3 in progress |
-| `WAITING_FOR_PLAN_APPROVAL` | Paused — awaiting `/dev-resume` |
+| `WAITING_FOR_PLAN_CLARIFICATION` | Paused — questions posted to ADO, awaiting answers in work item description |
+| `WAITING_FOR_PLAN_APPROVAL` | Paused — awaiting `/dev-resume` to approve plan |
 | `IMPLEMENTING` | Stage 4 in progress |
 | `REVIEWING` | Stage 5 in progress |
 | `TESTING` | Stage 6 in progress |
@@ -271,6 +310,10 @@ DevPilot automatically parses your ADO connection from `git remote get-url origi
 | `wit_get_work_items_batch_by_ids` | Stage 1 — fetch linked work items |
 | `wit_add_work_item_comment` | After every stage — progress trail |
 | `repo_create_pull_request` | Stage 7 — create the PR |
+| `pipelines_get_builds` | `/dev-fix-pipeline` — find latest build for the branch |
+| `pipelines_list_runs` | `/dev-fix-pipeline` — fallback for YAML pipeline runs |
+| `pipelines_get_build_log` | `/dev-fix-pipeline` — fetch build log |
+| `pipelines_get_build_log_by_id` | `/dev-fix-pipeline` — drill into failed timeline records |
 
 ### Progress comments
 
@@ -284,6 +327,29 @@ Document: docs/design/21238-design.md
 ```
 [DevPilot] Stage Completed: Pull Request
 PR: https://dev.azure.com/myorg/MyProject/_git/MyRepo/pullrequest/42
+```
+
+```
+[DevPilot] Design Clarifications Needed
+
+The following questions need answers before the design can be finalised.
+Suggested answers are provided — update the work item description with your
+decisions, then run `/dev-resume 21238`.
+
+1. Should the API be REST or GraphQL? (Suggested: REST — aligns with existing services)
+2. ...
+```
+
+```
+[DevPilot] Pipeline fix applied
+
+Build: 1042 (20260605.3)
+Error: Test assertion failure in PaymentServiceTests.ProcessRefund
+Fix: Updated mock to return correct status code on partial refund
+Files changed: src/PaymentService.cs, tests/PaymentServiceTests.cs
+Verification: tests passed
+
+The fix has been pushed to `feature/21238-add-payment-gateway`. The pipeline should re-run automatically.
 ```
 
 ---
@@ -316,6 +382,25 @@ PR: https://dev.azure.com/myorg/MyProject/_git/MyRepo/pullrequest/42
 # → "Work item 21238 workflow is already completed. PR: https://..."
 ```
 
+### Scenario D — Resume after clarification checkpoint
+
+```
+# DevPilot posted questions to the ADO work item (WAITING_FOR_DESIGN_CLARIFICATION)
+# You updated the work item description with your answers
+
+/dev-resume 21238
+# → Re-fetches updated work item, re-runs brainstorming with answers, continues
+```
+
+### Scenario E — Fix a failed pipeline
+
+```
+# PR is open, CI pipeline failed on the feature branch
+
+/dev-fix-pipeline 21238
+# → Fetches latest build, reads log, classifies failure, applies fix, verifies, pushes
+```
+
 ---
 
 ## Git Branching
@@ -343,30 +428,6 @@ DevPilot requires the `superpowers` plugin and uses these skills:
 | `superpowers:test-driven-development` | Stage 6 — Testing |
 | `superpowers:finishing-a-development-branch` | Stage 7 — Pull request |
 | `superpowers:systematic-debugging` | `/dev-fix-pipeline` — Pipeline failure fix |
-
----
-
-### `/dev-fix-pipeline <workItemId>`
-
-Investigates a failed CI pipeline on the PR for the given work item and automatically applies a fix.
-
-**What it does:**
-1. Checks preconditions: state file exists, PR is open (`prCreated: true`), current branch matches
-2. Fetches the latest pipeline build for the feature branch (classic or YAML)
-3. If the build is not failed, stops with a status message — no action taken
-4. Retrieves the build log and classifies the failure as automatable or not
-5. If not automatable (infra/secrets/config): posts analysis to the work item and stops
-6. Invokes `superpowers:systematic-debugging` to diagnose and fix the error
-7. If no files were changed by debugging, posts findings to the work item and stops
-8. Runs affected tests locally; if sandbox-restricted, falls back to build-only verification
-9. If verification fails, posts details to the work item and stops without pushing
-10. Commits and pushes the fix; updates the state file (`pipelineFixCount`, `lastPipelineFixAt`)
-11. Posts `[DevPilot] Pipeline fix applied` to the work item with error summary and verification result
-
-**Example:**
-```
-/dev-fix-pipeline 21238
-```
 
 ---
 
