@@ -182,6 +182,14 @@ Invoke `superpowers:brainstorming` using the Skill tool, passing the following b
 > {acceptanceCriteria}
 >
 > **Instructions for brainstorming:** Treat this work item as the feature requirement. The design document must include: Work Item ID and title, assumptions, impacted modules, database impact, API impact, and testing impact. Save the design to `docs/design/{workItemId}-design.md`.
+>
+> **Before asking any clarifying question in this session:** First post it as a comment to work item {workItemId} using `mcp__azure-devops__wit_add_work_item_comment` with the comment:
+> ```
+> [DevPilot] Design Question
+>
+> {your question}
+> ```
+> Then ask the same question in the session. This ensures questions are preserved if the session is lost.
 
 The brainstorming skill will run its interactive process. After it completes, verify that `docs/design/{workItemId}-design.md` exists.
 
