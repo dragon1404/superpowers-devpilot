@@ -213,7 +213,9 @@ Review the plan. When satisfied, run `/dev-resume <id>` to kick off automated im
 
 **Clarification checkpoints (conditional)**
 
-After brainstorming or writing-plans, if unresolved questions are found, DevPilot posts them as a numbered ADO comment with suggested answers and pauses:
+During brainstorming, before asking any clarifying question in the session, DevPilot posts it to the work item as a `[DevPilot] Design Question` comment. This ensures every question is preserved in Azure DevOps even if the session is lost.
+
+After brainstorming or writing-plans, if unresolved questions remain in the output document, DevPilot posts them as a numbered ADO comment with suggested answers and pauses:
 > *"Design clarifications needed. Questions posted to ADO work item. Update the description with your decisions, then run `/dev-resume <id>`."*
 
 Update the work item description in Azure DevOps with your answers, then run `/dev-resume <id>`. DevPilot re-fetches the updated description before continuing. If no questions arise, this checkpoint is skipped automatically.
