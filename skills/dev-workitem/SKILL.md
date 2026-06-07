@@ -189,7 +189,13 @@ Invoke `superpowers:brainstorming` using the Skill tool, passing the following b
 >
 > {your question}
 > ```
-> Then ask the same question in the session. This ensures questions are preserved if the session is lost.
+> Then ask the same question in the session. After the developer answers, post their answer as another comment:
+> ```
+> [DevPilot] Design Answer
+>
+> {developer's answer}
+> ```
+> This ensures the full Q&A is preserved in the work item if the session is lost.
 
 The brainstorming skill will run its interactive process. After it completes, verify that `docs/design/{workItemId}-design.md` exists.
 
