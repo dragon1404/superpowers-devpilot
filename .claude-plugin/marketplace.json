@@ -8,8 +8,8 @@
   "plugins": [
     {
       "name": "superpowers-devpilot",
-      "description": "Automated software delivery workflow: Azure DevOps integration + superpowers skills orchestration. Commands: /dev-workitem <id>, /dev-resume <id>",
-      "version": "0.1.0",
+      "description": "Automated software delivery workflow: Azure DevOps integration + superpowers skills orchestration. Commands: /dev-workitem <id>, /dev-resume <id>, /dev-fix-pipeline <id>, /dev-setup",
+      "version": "0.3.0",
       "source": "./",
       "author": {
         "name": "Dragon",
