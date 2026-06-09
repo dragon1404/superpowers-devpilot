@@ -230,7 +230,7 @@ DevPilot persists workflow state at `.devpilot/state/<workItemId>.json`:
 {
   "workItemId": 21238,
   "branch": "feature/21238-add-payment-gateway",
-  "worktreePath": null,
+  "worktreePath": "../feature-21238-add-payment-gateway",
   "adoOrg": "https://dev.azure.com/myorg",
   "adoProject": "MyProject",
   "adoRepo": "MyRepo",

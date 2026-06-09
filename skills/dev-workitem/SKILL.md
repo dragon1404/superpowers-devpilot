@@ -110,17 +110,22 @@ Run:
 git rev-parse --git-dir
 ```
 
-If the output contains `/worktrees/`, the current directory is a git worktree. Get its path:
+If the output contains `/worktrees/`, the current directory is a git worktree. Compute its relative path from the main repo root:
 ```bash
 git rev-parse --show-toplevel
+dirname $(git rev-parse --git-common-dir)
 ```
-Store the result as `worktreePath`.
+Use the two absolute paths to compute the relative path:
+```bash
+python3 -c "import os; print(os.path.relpath('{worktree_abs}', '{main_root}'))"
+```
+Store the result (e.g. `../feature-21238-add-payment`) as `worktreePath`.
 
 If not inside a worktree, check whether one exists for the feature branch:
 ```bash
 git worktree list --porcelain
 ```
-Find any entry whose `branch` line matches `refs/heads/feature/{workItemId}-{slug}`. If found, store its `worktree` path as `worktreePath`. Otherwise set `worktreePath` to `null`.
+Find any entry whose `branch` line matches `refs/heads/feature/{workItemId}-{slug}`. If found, compute its relative path from the main repo root using the same `python3 os.path.relpath` approach and store it as `worktreePath`. Otherwise set `worktreePath` to `null`.
 
 ## Step 6 — Initialize State File
 
