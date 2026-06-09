@@ -40,7 +40,7 @@ Read the `status` field and jump to the matching section below.
 
 The developer has updated the work item description with clarification answers. Re-read the work item and proceed to design.
 
-**Ca.** Call `mcp__azure-devops__wit_get_work_item` with id: {workItemId}. Read the updated title, description, and acceptance criteria.
+**Ca.** Call `mcp__azure-devops__wit_get_work_item` with id: {workItemId}. Read the updated title, description, acceptance criteria, and repro steps (`Microsoft.VSTS.TCM.ReproSteps`).
 
 **Cb.** Call `mcp__azure-devops__wit_add_work_item_comment`:
 - workItemId: {workItemId}
@@ -72,7 +72,7 @@ Design was in progress when the session ended. Post ADO comment:
 [DevPilot] Resuming Design stage
 ```
 
-Re-fetch the work item (`mcp__azure-devops__wit_get_work_item` with id: {workItemId}) to get the latest title, description, and acceptance criteria.
+Re-fetch the work item (`mcp__azure-devops__wit_get_work_item` with id: {workItemId}) to get the latest title, description, acceptance criteria, and repro steps (`Microsoft.VSTS.TCM.ReproSteps`).
 
 Then continue to **[STAGE 2: Design]** below.
 
@@ -89,6 +89,8 @@ Then continue to **[STAGE 2: Design]** below.
 >
 > **Acceptance Criteria:**
 > {acceptanceCriteria}
+>
+> {if reproSteps is not empty: "**Repro Steps:**\n> {reproSteps}\n>"}
 >
 > **Instructions for brainstorming:** Treat this work item as the feature requirement. The design document must include: Work Item ID and title, assumptions, impacted modules, database impact, API impact, and testing impact. Save the design to `docs/design/{workItemId}-design.md`.
 >
@@ -307,7 +309,7 @@ git commit -m "chore: devpilot state — waiting for plan approval on {workItemI
 
 The developer has updated the work item description with plan clarification answers. Re-read the work item and proceed to planning.
 
-**Pa.** Call `mcp__azure-devops__wit_get_work_item` with id: {workItemId}. Read the updated description.
+**Pa.** Call `mcp__azure-devops__wit_get_work_item` with id: {workItemId}. Read the updated title, description, acceptance criteria, and repro steps (`Microsoft.VSTS.TCM.ReproSteps`).
 
 **Pb.** Call `mcp__azure-devops__wit_add_work_item_comment`:
 - workItemId: {workItemId}

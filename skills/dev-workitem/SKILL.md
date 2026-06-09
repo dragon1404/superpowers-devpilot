@@ -77,6 +77,7 @@ Read and note:
 - `System.Title` → title
 - `System.Description` → description
 - `Microsoft.VSTS.Common.AcceptanceCriteria` → acceptanceCriteria
+- `Microsoft.VSTS.TCM.ReproSteps` → reproSteps (may be empty for non-bug work items)
 - `System.WorkItemType` → workItemType
 - `System.State` → state
 
@@ -180,6 +181,8 @@ Invoke `superpowers:brainstorming` using the Skill tool, passing the following b
 >
 > **Acceptance Criteria:**
 > {acceptanceCriteria}
+>
+> {if reproSteps is not empty: "**Repro Steps:**\n> {reproSteps}\n>"}
 >
 > **Instructions for brainstorming:** Treat this work item as the feature requirement. The design document must include: Work Item ID and title, assumptions, impacted modules, database impact, API impact, and testing impact. Save the design to `docs/design/{workItemId}-design.md`.
 >
