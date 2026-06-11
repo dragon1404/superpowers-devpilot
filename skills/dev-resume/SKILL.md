@@ -169,6 +169,16 @@ git add docs/design/{workItemId}-design.md
 git commit -m "docs: add design document for work item {workItemId}"
 ```
 
+**2c2.** Upload design document to ADO: read the full content of `docs/design/{workItemId}-design.md` and call `mcp__azure-devops__wit_add_work_item_comment` with:
+- workItemId: {workItemId}
+- comment:
+  ```
+  [DevPilot] Design Document
+
+  {full content of docs/design/{workItemId}-design.md}
+  ```
+If the tool call fails, print a warning and continue: "⚠️ [DevPilot] Warning: Could not upload design document — {error}."
+
 **2d.** Call `mcp__azure-devops__wit_add_work_item_comment`:
 - workItemId: {workItemId}
 - comment:
@@ -287,6 +297,16 @@ If you have no open questions, continue to **3h**.
 git add docs/plan/{workItemId}-plan.md
 git commit -m "docs: add implementation plan for work item {workItemId}"
 ```
+
+**3h2.** Upload implementation plan to ADO: read the full content of `docs/plan/{workItemId}-plan.md` and call `mcp__azure-devops__wit_add_work_item_comment` with:
+- workItemId: {workItemId}
+- comment:
+  ```
+  [DevPilot] Implementation Plan
+
+  {full content of docs/plan/{workItemId}-plan.md}
+  ```
+If the tool call fails, print a warning and continue: "⚠️ [DevPilot] Warning: Could not upload implementation plan — {error}."
 
 **3i.** Call `mcp__azure-devops__wit_add_work_item_comment`:
 - workItemId: {workItemId}
@@ -457,6 +477,16 @@ git add docs/review/{workItemId}-review.md
 git commit -m "docs: add code review report for work item {workItemId}"
 ```
 
+**5d2.** Upload code review to ADO: read the full content of `docs/review/{workItemId}-review.md` and call `mcp__azure-devops__wit_add_work_item_comment` with:
+- workItemId: {workItemId}
+- comment:
+  ```
+  [DevPilot] Code Review
+
+  {full content of docs/review/{workItemId}-review.md}
+  ```
+If the tool call fails, print a warning and continue: "⚠️ [DevPilot] Warning: Could not upload code review — {error}."
+
 **5e.** Call `mcp__azure-devops__wit_add_work_item_comment`:
 - workItemId: {workItemId}
 - comment:
@@ -506,6 +536,16 @@ If the tool call fails or errors, print a warning and continue: "⚠️ [DevPilo
 git add docs/testing/{workItemId}-testing.md
 git commit -m "docs: add testing report for work item {workItemId}"
 ```
+
+**6d2.** Upload testing report to ADO: read the full content of `docs/testing/{workItemId}-testing.md` and call `mcp__azure-devops__wit_add_work_item_comment` with:
+- workItemId: {workItemId}
+- comment:
+  ```
+  [DevPilot] Testing Report
+
+  {full content of docs/testing/{workItemId}-testing.md}
+  ```
+If the tool call fails, print a warning and continue: "⚠️ [DevPilot] Warning: Could not upload testing report — {error}."
 
 **6e.** Call `mcp__azure-devops__wit_add_work_item_comment`:
 - workItemId: {workItemId}

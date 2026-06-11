@@ -269,6 +269,19 @@ git add docs/design/{workItemId}-design.md
 git commit -m "docs: add design document for work item {workItemId}"
 ```
 
+## Step 10b — Upload Design Document to ADO
+
+Read the full content of `docs/design/{workItemId}-design.md` and call `mcp__azure-devops__wit_add_work_item_comment` with:
+- workItemId: {workItemId}
+- comment:
+  ```
+  [DevPilot] Design Document
+
+  {full content of docs/design/{workItemId}-design.md}
+  ```
+
+If the tool call fails, print a warning and continue: "⚠️ [DevPilot] Warning: Could not upload design document to work item {workItemId} — {error}."
+
 ## Step 11 — Post ADO Comment: Design Completed
 
 Call `mcp__azure-devops__wit_add_work_item_comment` with:
