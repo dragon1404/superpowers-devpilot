@@ -32,6 +32,7 @@ Extract the argument from the user's message (everything after `/dev-review-pr`)
 
 Call `mcp__azure-devops__wit_get_work_item` with:
 - id: {workItemId}
+- expand: "relations"
 
 Read:
 - `System.TeamProject` → store as `adoProject`
@@ -44,6 +45,7 @@ For each PR artifact link entry, extract the PR number from its `url` field. The
 
 Call `mcp__azure-devops__repo_list_pull_requests_by_repo_or_project` with:
 - project: {adoProject}
+- status: "All"
 
 From the returned list, keep only PRs whose `pullRequestId` is in `linkedPrIds` AND whose `status` is `"active"`.
 
@@ -56,8 +58,9 @@ Store:
 - `prId` = `pullRequestId` of the chosen PR
 - `adoRepo` = `repository.name` of the chosen PR
 - `prUrl` = `repository.remoteUrl` + `/pullrequest/` + `prId`
+- `title` = `title` of the chosen PR (taken from the matched PR object in this list result — it is available there, not from Step 3)
 
-Announce: "Found PR #{prId}: {title} — proceeding with review."
+Announce: "Found PR #{prId}: {title} — proceeding with review." (`title` is the value just stored from the matched PR list entry.)
 
 Proceed to Step 2.
 
@@ -100,6 +103,9 @@ Call `mcp__azure-devops__repo_get_pull_request_changes` with:
 - repositoryId: {adoRepo}
 - pullRequestId: {prId}
 - project: {adoProject}
+- top: 30
+
+This call returns line-by-line diff content for each changed file (`includeDiffs` and `includeLineContent` default to true).
 
 If the call fails, stop and say: "Could not fetch changed files for PR #{prId} — {error}. Cannot proceed without the file list."
 
@@ -113,34 +119,7 @@ Sort the remaining entries: edits first, then adds, then deletes.
 If more than 30 entries remain, warn:
 > "⚠️ PR has {total} changed files — reviewing first 30 (edits first, then adds, then deletes)."
 
-Take only the first 30 entries. Store as `filesToReview`.
-
-### Step 4b — Fetch File Contents
-
-For each file in `filesToReview`, fetch file content as follows:
-
-**Strip the `refs/heads/` prefix** from `sourceBranch` and `targetBranch` before using them as version descriptors. Example: `refs/heads/feature/123-foo` → `feature/123-foo`.
-
-For files with `changeType = "add"`:
-- Fetch head only. Set base content to empty string `""`.
-- Call `mcp__azure-devops__repo_get_file_content` with:
-  - repositoryId: {adoRepo}, project: {adoProject}, path: {file.path}
-  - versionDescriptor: `{ "versionType": "branch", "version": "{sourceBranch}" }`
-
-For files with `changeType = "delete"`:
-- Fetch base only. Set head content to empty string `""`.
-- Call `mcp__azure-devops__repo_get_file_content` with:
-  - repositoryId: {adoRepo}, project: {adoProject}, path: {file.path}
-  - versionDescriptor: `{ "versionType": "branch", "version": "{targetBranch}" }`
-
-For files with `changeType = "edit"`:
-- Fetch both versions.
-- Head: versionDescriptor `{ "versionType": "branch", "version": "{sourceBranch}" }`
-- Base: versionDescriptor `{ "versionType": "branch", "version": "{targetBranch}" }`
-
-If a fetch fails for any file, warn: "⚠️ Could not fetch {file.path} — skipping." Remove it from `filesToReview` and continue.
-
-Store collected results as `fileDiffs`: an array of `{ path, baseContent, headContent, changeType }`.
+Take only the first 30 entries. Store as `fileDiffs`: an array of `{ path, changeType, diff }` where `diff` is the line-by-line diff content returned for that file by `mcp__azure-devops__repo_get_pull_request_changes`.
 
 ## Step 5 — Code Review
 
@@ -148,7 +127,7 @@ Store collected results as `fileDiffs`: an array of `{ path, baseContent, headCo
 
 *Skip this section if `reviewMode = "L"`. Jump to Step 5L.*
 
-Review all entries in `fileDiffs` at high effort. For each file, compare `baseContent` and `headContent`. Identify issues in these categories:
+Review the `diff` content of each entry in `fileDiffs` at high effort. Identify issues in these categories:
 
 - **Correctness bugs:** logic errors, off-by-one, null/undefined dereferences, race conditions, incorrect calculations
 - **Security issues:** injection vulnerabilities (SQL, shell, XSS), secret or credential exposure, missing authentication or authorization checks
@@ -160,7 +139,7 @@ For each issue found, record a finding with these exact fields:
 ```json
 {
   "filePath": "<exact path as it appears in fileDiffs>",
-  "lineNumber": "<line number in headContent; for deletes, use line number in baseContent>",
+  "lineNumber": "<line number on the file's new/head side as shown in the diff>",
   "severity": "Critical | Important | Minor",
   "title": "<one-line description, max 80 chars>",
   "detail": "<explanation of why this is a problem>",
@@ -229,59 +208,37 @@ Separate `findings` into:
 
 ### Step 6a — Post Critical and Important Threads
 
-For each finding in `criticalAndImportant`, call `mcp__azure-devops__repo_create_pull_request_thread` with:
-
-```json
-{
-  "repositoryId": "{adoRepo}",
-  "pullRequestId": "{prId}",
-  "project": "{adoProject}",
-  "comments": [
-    {
-      "parentCommentId": 0,
-      "content": "[DevPilot Review] {severity}: {title}\n\n{detail}\n\n💡 {suggestion}",
-      "commentType": "text"
-    }
-  ],
-  "threadContext": {
-    "filePath": "{filePath}",
-    "rightFileStart": { "line": {lineNumber}, "offset": 1 },
-    "rightFileEnd":   { "line": {lineNumber}, "offset": 1 }
-  },
-  "status": "active"
-}
-```
+For each finding in `criticalAndImportant`, call `mcp__azure-devops__repo_create_pull_request_thread` with these flat params:
+- repositoryId: {adoRepo}
+- pullRequestId: {prId}
+- project: {adoProject}
+- content: `"[DevPilot Review] {severity}: {title}\n\n{detail}\n\n💡 {suggestion}"`
+- filePath: {filePath}
+- rightFileStartLine: {lineNumber}
+- rightFileStartOffset: 1
+- rightFileEndLine: {lineNumber}
+- rightFileEndOffset: 1
+- status: "Active"
 
 If `suggestion` is absent or empty, omit the `💡 {suggestion}` line from `content`.
 
-If `lineNumber` is null, OMIT the `threadContext` field entirely so the comment posts as a file-level/PR-level thread rather than anchored to a wrong line. When `lineNumber` is present, keep the `threadContext` field as shown above.
+If `lineNumber` is null, OMIT `filePath`, `rightFileStartLine`, `rightFileStartOffset`, `rightFileEndLine`, and `rightFileEndOffset` (post as a PR-level comment with just `content` + `status`). When `lineNumber` is present, include all of those params as shown above.
 
 If the call fails, log: "⚠️ Could not post thread for {filePath}:{lineNumber} — {error}." Continue to the next finding.
 
 ### Step 6b — Post Batched Minor Threads
 
-For each `filePath` key in `minorByFile`, call `mcp__azure-devops__repo_create_pull_request_thread` with:
-
-```json
-{
-  "repositoryId": "{adoRepo}",
-  "pullRequestId": "{prId}",
-  "project": "{adoProject}",
-  "comments": [
-    {
-      "parentCommentId": 0,
-      "content": "[DevPilot Review] Minor issues in {filePath}\n\n{for each minor finding: '- Line {lineNumber}: {title} — {detail}'}",
-      "commentType": "text"
-    }
-  ],
-  "threadContext": {
-    "filePath": "{filePath}",
-    "rightFileStart": { "line": {first minor finding's lineNumber}, "offset": 1 },
-    "rightFileEnd":   { "line": {last minor finding's lineNumber}, "offset": 1 }
-  },
-  "status": "active"
-}
-```
+For each `filePath` key in `minorByFile`, call `mcp__azure-devops__repo_create_pull_request_thread` with these flat params:
+- repositoryId: {adoRepo}
+- pullRequestId: {prId}
+- project: {adoProject}
+- content: `"[DevPilot Review] Minor issues in {filePath}\n\n{for each minor finding: '- Line {lineNumber}: {title} — {detail}'}"`
+- filePath: {filePath}
+- rightFileStartLine: {first minor finding's lineNumber}
+- rightFileStartOffset: 1
+- rightFileEndLine: {last minor finding's lineNumber}
+- rightFileEndOffset: 1
+- status: "Active"
 
 If the call fails, log: "⚠️ Could not post minor thread for {filePath} — {error}." Continue.
 
@@ -302,25 +259,14 @@ Build `filesReviewedLabel`:
 - If PR was not capped: `"{n} files reviewed"`
 - If PR was capped at 30: `"30 of {total} files reviewed (first 30 only)"`
 
-Call `mcp__azure-devops__repo_create_pull_request_thread` with:
+Call `mcp__azure-devops__repo_create_pull_request_thread` with these flat params (no `filePath` or line params — this is a top-level PR comment):
+- repositoryId: {adoRepo}
+- pullRequestId: {prId}
+- project: {adoProject}
+- content: `"[DevPilot Review] Summary\n\nPR: {title}\nFiles reviewed: {filesReviewedLabel}\nFindings: {countCritical} Critical · {countImportant} Important · {countMinor} Minor\n\nOverall: {assessment}"`
+- status: "Closed"
 
-```json
-{
-  "repositoryId": "{adoRepo}",
-  "pullRequestId": "{prId}",
-  "project": "{adoProject}",
-  "comments": [
-    {
-      "parentCommentId": 0,
-      "content": "[DevPilot Review] Summary\n\nPR: {title}\nFiles reviewed: {filesReviewedLabel}\nFindings: {countCritical} Critical · {countImportant} Important · {countMinor} Minor\n\nOverall: {assessment}",
-      "commentType": "text"
-    }
-  ],
-  "status": "closed"
-}
-```
-
-Note: no `threadContext` field — this is a top-level PR comment. `"status": "closed"` marks it as informational rather than an active review thread requiring resolution.
+Note: no `filePath` or line params — this is a top-level PR comment. `status: "Closed"` marks it as informational rather than an active review thread requiring resolution.
 
 If the call fails, log: "⚠️ Could not post summary thread — {error}." Continue to Step 8.
 
