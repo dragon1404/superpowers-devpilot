@@ -30,6 +30,22 @@ If `worktreePath` is not null, tell the developer:
 
 If `worktreePath` is null, continue without comment.
 
+## Step 2c — Detect Gitignore Settings
+
+Run:
+```bash
+git check-ignore -q docs/ 2>/dev/null && echo "IGNORED" || echo "TRACKED"
+git check-ignore -q .devpilot/ 2>/dev/null && echo "IGNORED" || echo "TRACKED"
+```
+
+Store:
+- `docsGitignored` = true if `docs/` is IGNORED, false otherwise
+- `stateGitignored` = true if `.devpilot/` is IGNORED, false otherwise
+
+**Global commit rule (applies for the rest of this skill):**
+- If `docsGitignored` is true — skip all `git add docs/...` commands and their associated commits
+- If `stateGitignored` is true — skip all `git add .devpilot/...` commands and their associated commits
+
 ## Step 3 — Branch on Status
 
 Read the `status` field and jump to the matching section below.

@@ -52,6 +52,22 @@ Check if `.devpilot/state/{workItemId}.json` exists in the current working direc
 
 If it exists, stop and say: "A DevPilot workflow for work item {workItemId} already exists. Use `/dev-resume {workItemId}` to continue."
 
+## Step 2b — Detect Gitignore Settings
+
+Run:
+```bash
+git check-ignore -q docs/ 2>/dev/null && echo "IGNORED" || echo "TRACKED"
+git check-ignore -q .devpilot/ 2>/dev/null && echo "IGNORED" || echo "TRACKED"
+```
+
+Store:
+- `docsGitignored` = true if `docs/` is IGNORED, false otherwise
+- `stateGitignored` = true if `.devpilot/` is IGNORED, false otherwise
+
+**Global commit rule (applies for the rest of this skill):**
+- If `docsGitignored` is true — skip all `git add docs/...` commands and their associated commits
+- If `stateGitignored` is true — skip all `git add .devpilot/...` commands and their associated commits
+
 ## Step 3 — Parse ADO Connection from Git Remote
 
 Run: `git remote get-url origin`
