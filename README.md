@@ -354,6 +354,36 @@ Verification: tests passed
 The fix has been pushed to `feature/21238-add-payment-gateway`. The pipeline should re-run automatically.
 ```
 
+### Document uploads
+
+The full content of each stage document is also posted to the work item as a comment, so the entire delivery trail lives in Azure DevOps even when `docs/` is not committed to git:
+
+```
+[DevPilot] Design Document
+
+<full markdown content of docs/21238-design.md>
+```
+
+The same happens for the implementation plan (`[DevPilot] Implementation Plan`), code review (`[DevPilot] Code Review`), and testing report (`[DevPilot] Testing Report`). These uploads are non-blocking — a failed post logs a warning and the workflow continues.
+
+---
+
+## Local-Only Artifacts (gitignore)
+
+By default, DevPilot commits its artifacts (`docs/` and `.devpilot/`) to the feature branch. If you would rather keep them out of git history, add them to `.gitignore`:
+
+```
+docs/
+.devpilot/
+```
+
+At startup, DevPilot checks `.gitignore` via `git check-ignore`. When a directory is ignored, DevPilot still **writes** the files locally (and still uploads doc content to the work item) but **skips committing** them:
+
+- `docs/` ignored → design, plan, review, and testing docs are not committed
+- `.devpilot/` ignored → the state file is not committed
+
+This check runs once per `/dev-workitem` and `/dev-resume` invocation.
+
 ---
 
 ## Resume Examples
