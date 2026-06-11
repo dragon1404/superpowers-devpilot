@@ -1,6 +1,6 @@
 {
   "name": "superpowers-devpilot",
-  "description": "Automated software delivery workflow: Azure DevOps integration + superpowers skills orchestration. Commands: /dev-workitem <id>, /dev-resume <id>, /dev-fix-pipeline <id>, /dev-setup",
+  "description": "Automate your Azure DevOps delivery lifecycle — from work item to pull request — with two commands and two approval checkpoints, powered by Claude Code and superpowers skills.",
   "version": "0.4.0",
   "author": {
     "name": "Dragon",
