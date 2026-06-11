@@ -17,6 +17,7 @@ Extract the argument from the user's message (everything after `/dev-review-pr`)
   - `https://dev.azure.com/{org}/{project}/_git/{repo}/pullrequest/{prId}` → `adoOrg = https://dev.azure.com/{org}`
   - `https://{org}.visualstudio.com/{project}/_git/{repo}/pullrequest/{prId}` → `adoOrg = https://{org}.visualstudio.com`
   - Extract and store: `adoOrg`, `adoProject`, `adoRepo`, `prId` (integer at the end of the URL)
+  - Store the full URL as `prUrl`.
   - Skip Step 1b. Proceed to Step 2.
 
 - If the argument is a plain integer (digits only) → treat it as a work item ID. Store as `workItemId`. Proceed to Step 1b.
@@ -215,7 +216,7 @@ Map severity:
 
 Extract:
 - `filePath`: any file path mentioned in the finding (e.g. `src/foo.ts`)
-- `lineNumber`: any line number mentioned; if absent, use `1`
+- `lineNumber`: any line number mentioned; if absent, set `lineNumber = null` (meaning "no specific line")
 - `title`, `detail`, `suggestion`: from the finding text; split as best as possible
 
 Store all parsed findings as `findings`. Proceed to Step 6.
@@ -252,6 +253,8 @@ For each finding in `criticalAndImportant`, call `mcp__azure-devops__repo_create
 ```
 
 If `suggestion` is absent or empty, omit the `💡 {suggestion}` line from `content`.
+
+If `lineNumber` is null, OMIT the `threadContext` field entirely so the comment posts as a file-level/PR-level thread rather than anchored to a wrong line. When `lineNumber` is present, keep the `threadContext` field as shown above.
 
 If the call fails, log: "⚠️ Could not post thread for {filePath}:{lineNumber} — {error}." Continue to the next finding.
 
