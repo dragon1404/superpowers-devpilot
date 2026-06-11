@@ -7,7 +7,7 @@
 
 ## Overview
 
-A standalone DevPilot skill that reviews any Azure DevOps pull request and posts findings as inline PR thread comments. Given a full ADO PR URL, it fetches the diff via ADO MCP tools, reviews the code at "high" effort, and creates a PR thread for each finding — mirroring what a human code reviewer would do.
+A standalone DevPilot skill that reviews any Azure DevOps pull request and posts findings as inline PR thread comments. Given either a full ADO PR URL or a work item ID, it locates the PR, fetches the diff via ADO MCP tools, reviews the code at "high" effort, and creates a PR thread for each finding — mirroring what a human code reviewer would do.
 
 It is independent of any DevPilot workflow state file. Any ADO PR can be reviewed, not just ones created by `/dev-workitem`.
 
@@ -16,17 +16,21 @@ It is independent of any DevPilot workflow state file. Any ADO PR can be reviewe
 ## Command
 
 ```
-/dev-review-pr <prUrl>
+/dev-review-pr <prUrl | workItemId>
 ```
 
-**Input:** A full ADO PR URL in one of these formats:
+**Input — two accepted forms:**
+
+**Form 1 — PR URL.** A full ADO PR URL:
 - `https://dev.azure.com/{org}/{project}/_git/{repo}/pullrequest/{prId}`
 - `https://{org}.visualstudio.com/{project}/_git/{repo}/pullrequest/{prId}`
 
 Parsed fields: `adoOrg`, `adoProject`, `adoRepo`, `prId`.
 
-If the URL does not match either pattern, stop immediately with:
-> "Invalid PR URL. Expected format: `https://dev.azure.com/{org}/{project}/_git/{repo}/pullrequest/{id}`"
+**Form 2 — Work item ID.** A plain integer (e.g. `42138`). The skill resolves it to the latest linked active PR via ADO MCP tools (see Step 1b).
+
+If the argument is neither a valid ADO PR URL nor a plain integer, stop immediately with:
+> "Invalid input. Provide a full ADO PR URL or a work item ID (integer). Example: `/dev-review-pr 42138` or `/dev-review-pr https://dev.azure.com/org/project/_git/repo/pullrequest/123`"
 
 ---
 
@@ -52,9 +56,32 @@ Both modes converge at the same posting step — thread format is identical.
 
 ## Step-by-Step Flow
 
-### Step 1 — Parse URL
+### Step 1 — Detect Input Type
 
-Extract `adoOrg`, `adoProject`, `adoRepo`, `prId` from the PR URL.
+Determine whether the argument is a PR URL (contains `pullrequest/`) or a work item ID (plain integer).
+
+- **PR URL path:** extract `adoOrg`, `adoProject`, `adoRepo`, `prId` directly from the URL. Skip Step 1b.
+- **Work item ID path:** store the integer as `workItemId`. Proceed to Step 1b.
+
+### Step 1b — Resolve Work Item ID to PR (work item path only)
+
+1. Call `wit_get_work_item` with `workItemId`. Read:
+   - `System.TeamProject` → `adoProject`
+   - `relations` array → filter for entries where `rel = "ArtifactLink"` and `attributes.name = "Pull Request"`
+
+2. Extract the PR number from each matching relation's `url` field. ADO artifact link URLs end with the numeric PR ID as the last path segment (e.g. `vstfs:///Git/PullRequestId/{collectionId}/{projectId}/{prId}`).
+
+3. If no PR links are found, stop and say:
+   > "Work item {workItemId} has no linked pull requests. Link a PR to the work item in ADO first, or provide the PR URL directly."
+
+4. Call `repo_list_pull_requests_by_repo_or_project` scoped to `adoProject` to retrieve full PR details. Match the returned PRs against the extracted PR IDs.
+
+5. From matching PRs, keep only those with `status: active`. If none are active, stop and say:
+   > "Work item {workItemId} has linked PRs but none are currently active ({list of PR IDs with their statuses})."
+
+6. If multiple active PRs are found, take the one with the most recent `creationDate`. Store its `pullRequestId` as `prId`, `repository.name` as `adoRepo`, and construct the full URL as `prUrl`.
+
+7. Announce: "Found PR #{prId}: {title} — proceeding with review."
 
 ### Step 2 — Prompt Review Mode
 
@@ -169,7 +196,9 @@ If zero findings across all severities, report "No issues found at high effort."
 
 | Scenario | Behaviour |
 |---|---|
-| Invalid PR URL format | Stop immediately with format error |
+| Invalid input (neither URL nor integer) | Stop immediately with format error |
+| Work item has no linked PR artifact links | Stop with instructions to link a PR |
+| Work item has linked PRs but none are active | Stop listing PR IDs and statuses |
 | PR is not active (abandoned/completed) | Stop with status message |
 | `repo_get_pull_request_changes` fails | Stop with error — cannot proceed without file list |
 | `repo_get_file_content` fails for a file | Skip that file, warn, continue |
