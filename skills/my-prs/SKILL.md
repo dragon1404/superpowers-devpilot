@@ -73,3 +73,47 @@ Call `mcp__azure-devops__core_get_identity_ids` with:
 If it returns an identity, store its GUID as `myIdentityId` and set `identityUnresolved = false`. This identity is used only to find your own vote inside each reviewer PR's `reviewers[]` array.
 
 If the call fails or returns no match, set `myIdentityId = null` and `identityUnresolved = true`.
+
+## Step 4 — Query Pull Requests
+
+Both queries use `status: "Active"` and are scoped to `project`. Do not pass `repositoryId` — project scope returns PRs across all repos in the project.
+
+**Query A — PRs I created.** Call `mcp__azure-devops__repo_list_pull_requests_by_repo_or_project` with:
+- project: {project}
+- status: "Active"
+- created_by_me: true
+- top: 100
+
+Store the result as `createdByMe`.
+
+**Query B — PRs where I am a reviewer.** Call `mcp__azure-devops__repo_list_pull_requests_by_repo_or_project` with:
+- project: {project}
+- status: "Active"
+- i_am_reviewer: true
+- top: 100
+
+Store the result as `reviewerPrs`.
+
+If either call fails, stop and say (do not render a partial list):
+
+> "Failed to fetch pull requests for project {project}: {error}."
+
+## Step 5 — Split the Reviewer Bucket by Vote
+
+For each PR in `reviewerPrs`:
+
+- If `identityUnresolved` is true → place it in **Waiting for my review** (safe fallback — surfaces it rather than hiding it).
+- Otherwise, find the entry in the PR's `reviewers[]` array whose `id` equals `myIdentityId`, and read its `vote`:
+  - `vote == 0` → **Waiting for my review**
+  - `vote != 0` → **Assigned to me**, with a vote label derived from the vote value:
+    - `10` → `approved`
+    - `5` → `approved with suggestions`
+    - `-5` → `waiting for author`
+    - `-10` → `rejected`
+  - If no reviewer entry matches `myIdentityId` → **Waiting for my review**.
+
+The third bucket, **PRs I created**, is `createdByMe`.
+
+## Step 5b — Tag New PRs
+
+Build `currentPrIds` = the set of all `pullRequestId` values across the three buckets. A PR is **new** if its id is in `currentPrIds` but not in `previousPrIds`. Record which PRs are new for rendering. If `previousPrIds` is unset (first run), no PR is new.
