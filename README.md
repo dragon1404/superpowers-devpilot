@@ -179,6 +179,44 @@ If the pipeline fails again after the fix, run the same command to retry.
 
 ---
 
+### `/pr-review <prUrl | workItemId>`
+
+Reviews an Azure DevOps pull request and posts findings as inline PR comments. Accepts either a PR URL directly or a work item ID (DevPilot resolves the linked active PR).
+
+**What it does:**
+1. Resolves the target PR — from the URL, or by finding the active PR linked to the work item
+2. Fetches the PR diff (via the ADO API, or by checking out the source branch locally)
+3. Runs `superpowers:requesting-code-review` over the changes
+4. Posts each finding as an inline comment thread on the relevant file and line in the PR
+
+**Example:**
+```
+/pr-review 42138
+/pr-review https://dev.azure.com/org/project/_git/repo/pullrequest/123
+```
+
+---
+
+### `/my-prs [project] [email]`
+
+Lists the active pull requests that involve you, so you don't miss reviews. Both arguments are optional and order-independent (the token containing `@` is treated as the email).
+
+PRs are grouped into three buckets:
+- **Waiting for my review** — you're a reviewer and haven't voted
+- **Assigned to me** — you're a reviewer and have already voted (shows your vote)
+- **PRs I created**
+
+Project defaults to the current repo's ADO project (parsed from `origin`); email defaults to your session identity. Both can be remembered: DevPilot persists the resolved config and the last-run PR set to `./.devpilot/my-prs.json`, and tags any PR that is new since your last check with `[NEW]`.
+
+**Example:**
+```
+/my-prs
+/my-prs Payments
+/my-prs Payments me@corp.com
+```
+
+---
+
 ## Workflow Stages
 
 | # | Stage | Skill invoked | Artifact |
