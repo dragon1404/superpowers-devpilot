@@ -35,23 +35,27 @@ Examples:
 - `/my-prs me@corp.com` — explicit email
 - `/my-prs Payments me@corp.com` — explicit project and email (any order)
 
-### Persisted config
+### Persisted state
 
-The skill reads and writes a small JSON config at `./.devpilot/my-prs.json` (in the current working directory where the skill runs):
+The skill reads and writes a small JSON file at `./.devpilot/my-prs.json` (in the current working directory where the skill runs). It holds both the resolved config and the last run's PR set:
 
 ```json
 {
   "email": "me@corp.com",
-  "project": "Payments"
+  "project": "Payments",
+  "lastCheck": {
+    "checkedAt": "2026-06-12T09:00:00Z",
+    "prIds": [1423, 1488, 1402, 1500]
+  }
 }
 ```
 
-This lets a developer set their email and default project once and then just type `/my-prs`. Resolution precedence (highest wins):
+- `email` / `project` — remembered config so a bare `/my-prs` reuses them. Resolution precedence (highest wins):
+  - **email**: argument → config file → session email (Claude Code `userEmail`)
+  - **project**: argument → config file → git `origin` remote
+- `lastCheck.prIds` — the flat set of pull request IDs surfaced on the previous run, used to tag PRs that are **new since you last checked**.
 
-- **email**: argument → config file → session email (Claude Code `userEmail`)
-- **project**: argument → config file → git `origin` remote
-
-After resolving, the skill writes the resolved `email` and `project` back to `./.devpilot/my-prs.json` (creating the `.devpilot` directory if needed), so the latest values are remembered for next time.
+The file is rewritten at the end of each run with the resolved config and the current run's PR IDs.
 
 ### No organization needed
 
@@ -74,9 +78,13 @@ Take everything after `/my-prs`, trim, and split on whitespace into at most two 
 - A token containing `@` → store as `argEmail`.
 - A token not containing `@` → store as `argProject`.
 
-### Step 1b — Load Persisted Config
+### Step 1b — Load Persisted State
 
-If `./.devpilot/my-prs.json` exists, read it and parse `email` and `project` as `configEmail` and `configProject`. If the file is missing or unparseable, treat both as unset (do not error).
+If `./.devpilot/my-prs.json` exists, read it and parse:
+- `email` and `project` as `configEmail` and `configProject`
+- `lastCheck.prIds` as `previousPrIds` (the set of PR IDs from the previous run)
+
+If the file is missing or unparseable, treat all three as unset (do not error). When `previousPrIds` is unset (first run), nothing is tagged `[NEW]`.
 
 ### Step 2 — Resolve Email and Project
 
@@ -99,16 +107,6 @@ Parse the project segment using the same patterns as `/dev-workitem`:
 If `project` cannot be resolved from any source (no argument, no config, no parseable git remote) → stop:
 
 > "No project specified and no Azure DevOps git remote found. Run `/my-prs <projectName>` — e.g. `/my-prs Payments`."
-
-### Step 2b — Persist Resolved Config
-
-Write the resolved `email` and `project` to `./.devpilot/my-prs.json`, creating the `.devpilot` directory if it does not exist:
-
-```json
-{ "email": "{email}", "project": "{project}" }
-```
-
-This is best-effort — if the write fails (e.g. read-only directory), warn but continue; it does not block the listing.
 
 ### Step 3 — Resolve Identity (vote split only)
 
@@ -166,17 +164,22 @@ For each PR in `reviewerPrs`:
     - `-10` → rejected
   - If no matching reviewer entry is found → **Waiting for my review** (fallback).
 
+### Step 5b — Tag New PRs
+
+Compute `currentPrIds` = the set of all `pullRequestId`s across the three buckets. A PR is **new** if its ID is in `currentPrIds` but not in `previousPrIds`. Mark new PRs for a `[NEW]` tag in render. If `previousPrIds` is unset (first run), no PR is tagged new.
+
 ### Step 6 — Render Output
 
 Print three sections in this order. Within each section, sort PRs **oldest-first** by `creationDate`. Each PR is one compact line:
 
 ```
-#{pullRequestId}  {title} — {createdBy.displayName}, {age}{voteLabel}  {prUrl}
+#{pullRequestId}  {title} — {createdBy.displayName}, {age}{voteLabel}  {prUrl}{newTag}
 ```
 
 - `age` is computed from `creationDate` relative to now, rendered compactly (e.g. `3h`, `2d`, `5w`).
 - `voteLabel` appears only in the "Assigned to me" section, formatted as ` ({label})`.
 - `prUrl` is the web URL of the PR, built from the PR payload's `repository.webUrl` as `{repository.webUrl}/pullrequest/{pullRequestId}`. This keeps the skill org-agnostic — the org is whatever the payload already contains.
+- `newTag` is ` [NEW]` for PRs new since the last run, otherwise empty.
 
 If `identityUnresolved` is true, print a one-line note under the "Waiting for my review" header:
 
@@ -189,7 +192,7 @@ my-prs — project: Payments
 
 Waiting for my review (2)
   #1423  Fix token refresh race        — alice, 5d   https://dev.azure.com/org/Payments/_git/api/pullrequest/1423
-  #1488  Add retry to webhook sender   — bob,   2d   https://dev.azure.com/org/Payments/_git/api/pullrequest/1488
+  #1488  Add retry to webhook sender   — bob,   2d   https://dev.azure.com/org/Payments/_git/api/pullrequest/1488 [NEW]
 
 Assigned to me (1)
   #1402  Bump SDK to 4.x  — carol, 8d (approved)  https://dev.azure.com/org/Payments/_git/sdk/pullrequest/1402
@@ -204,6 +207,23 @@ Empty buckets render as `(none)`:
 Assigned to me (none)
 ```
 
+### Step 7 — Persist State
+
+After rendering, write `./.devpilot/my-prs.json` (creating the `.devpilot` directory if needed) with the resolved config and this run's PR IDs:
+
+```json
+{
+  "email": "{email}",
+  "project": "{project}",
+  "lastCheck": {
+    "checkedAt": "{ISO-8601 now}",
+    "prIds": [ ...currentPrIds ]
+  }
+}
+```
+
+This is best-effort — if the write fails (e.g. read-only directory), warn but continue; it does not change the listing already shown.
+
 ---
 
 ## Error Handling
@@ -215,8 +235,8 @@ Assigned to me (none)
 | `core_get_identity_ids` fails / no match | Continue; all reviewer PRs go to "Waiting for my review" with a note; vote labels omitted |
 | `repo_list_pull_requests_by_repo_or_project` fails (either query) | Stop with the error — no partial list |
 | A reviewer PR has no matching reviewer entry for my identity | Place it in "Waiting for my review" (fallback) |
-| `./.devpilot/my-prs.json` missing or unparseable | Treat config as unset; continue with arg/session/git resolution |
-| Writing `./.devpilot/my-prs.json` fails | Warn and continue — config persistence is best-effort, never blocks the listing |
+| `./.devpilot/my-prs.json` missing or unparseable | Treat config and `previousPrIds` as unset; continue with arg/session/git resolution; tag no PRs `[NEW]` |
+| Writing `./.devpilot/my-prs.json` fails | Warn and continue — persistence is best-effort, never blocks the listing |
 
 ---
 
@@ -225,7 +245,7 @@ Assigned to me (none)
 - Read-only: no votes, comments, or any write operations
 - Active PRs only
 - Single project per invocation (scope is the resolved project)
-- Idempotent and safe to re-run; the only thing it writes is the `./.devpilot/my-prs.json` config (email + default project)
+- Read-only against ADO; the only thing it writes locally is `./.devpilot/my-prs.json` (email, default project, and the last run's PR IDs)
 
 ---
 
