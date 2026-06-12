@@ -1,6 +1,6 @@
 ---
-name: dev-review-pr
-description: "Review an Azure DevOps pull request and post findings as inline PR comments. Usage: /dev-review-pr <prUrl | workItemId>"
+name: pr-review
+description: "Review an Azure DevOps pull request and post findings as inline PR comments. Usage: /pr-review <prUrl | workItemId>"
 ---
 
 # DevPilot: Review Pull Request
@@ -11,7 +11,7 @@ description: "Review an Azure DevOps pull request and post findings as inline PR
 
 ## Step 1 — Detect Input Type
 
-Extract the argument from the user's message (everything after `/dev-review-pr`). Trim whitespace.
+Extract the argument from the user's message (everything after `/pr-review`). Trim whitespace.
 
 - If the argument contains `pullrequest/` → it is a PR URL. Parse using these patterns:
   - `https://dev.azure.com/{org}/{project}/_git/{repo}/pullrequest/{prId}` → `adoOrg = https://dev.azure.com/{org}`
@@ -25,8 +25,8 @@ Extract the argument from the user's message (everything after `/dev-review-pr`)
 - If neither condition applies → stop and say:
   > "Invalid input. Provide a full ADO PR URL or a work item ID (integer).
   > Examples:
-  > - `/dev-review-pr 42138`
-  > - `/dev-review-pr https://dev.azure.com/org/project/_git/repo/pullrequest/123`"
+  > - `/pr-review 42138`
+  > - `/pr-review https://dev.azure.com/org/project/_git/repo/pullrequest/123`"
 
 ## Step 1b — Resolve Work Item ID to PR (work item path only)
 
@@ -39,7 +39,7 @@ Read:
 - `relations` array → filter entries where `rel = "ArtifactLink"` AND `attributes.name = "Pull Request"`
 
 If no such entries are found, stop and say:
-> "Work item {workItemId} has no linked pull requests. Link a PR to the work item in ADO first, or provide the PR URL directly: `/dev-review-pr <prUrl>`"
+> "Work item {workItemId} has no linked pull requests. Link a PR to the work item in ADO first, or provide the PR URL directly: `/pr-review <prUrl>`"
 
 For each PR artifact link entry, extract the PR number from its `url` field. The URL has the format `vstfs:///Git/PullRequestId/{collectionId}/{projectId}/{prId}` — the PR number is the last path segment (the rightmost `/`-delimited integer). Collect all extracted PR numbers as `linkedPrIds`.
 
@@ -171,7 +171,7 @@ If the output is non-empty, stop and say:
 > - `git stash` to stash changes
 > - `git commit -am 'WIP'` to commit in-progress work
 >
-> Then retry: `/dev-review-pr {original input argument}`"
+> Then retry: `/pr-review {original input argument}`"
 
 **Step 5L-2:** Fetch and check out the source branch (strip `refs/heads/` prefix first):
 
@@ -181,7 +181,7 @@ git checkout {sourceBranch}
 ```
 
 If checkout fails for any reason (branch not found, conflicts, etc.), stop and say:
-> "Could not check out branch `{sourceBranch}`. Try Mode A instead by running `/dev-review-pr {original input argument}` and choosing [A]."
+> "Could not check out branch `{sourceBranch}`. Try Mode A instead by running `/pr-review {original input argument}` and choosing [A]."
 
 **Step 5L-3:** Invoke the built-in `code-review` skill using the Skill tool with no additional arguments. It will review the diff of the checked-out branch against the base.
 
