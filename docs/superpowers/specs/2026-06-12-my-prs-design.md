@@ -25,15 +25,33 @@ It is read-only and stateless. It performs no write actions (no voting, no comme
 
 Both arguments are optional and **order-independent**. They are disambiguated by content:
 
-- The token containing `@` → `email` (identity override). When omitted, defaults to the session email.
-- The other token → `project` (project name). When omitted, derived from the git `origin` remote.
+- The token containing `@` → `email` (identity override).
+- The other token → `project` (project name).
 
 Examples:
 
-- `/my-prs` — current repo's project, session email
-- `/my-prs Payments` — explicit project, session email
-- `/my-prs me@corp.com` — current repo's project, explicit email
+- `/my-prs` — uses saved/derived values
+- `/my-prs Payments` — explicit project
+- `/my-prs me@corp.com` — explicit email
 - `/my-prs Payments me@corp.com` — explicit project and email (any order)
+
+### Persisted config
+
+The skill reads and writes a small JSON config at `./.devpilot/my-prs.json` (in the current working directory where the skill runs):
+
+```json
+{
+  "email": "me@corp.com",
+  "project": "Payments"
+}
+```
+
+This lets a developer set their email and default project once and then just type `/my-prs`. Resolution precedence (highest wins):
+
+- **email**: argument → config file → session email (Claude Code `userEmail`)
+- **project**: argument → config file → git `origin` remote
+
+After resolving, the skill writes the resolved `email` and `project` back to `./.devpilot/my-prs.json` (creating the `.devpilot` directory if needed), so the latest values are remembered for next time.
 
 ### No organization needed
 
@@ -53,27 +71,44 @@ Confirm the Azure DevOps MCP tools are available in the session (e.g. `mcp__azur
 
 Take everything after `/my-prs`, trim, and split on whitespace into at most two tokens.
 
-- A token containing `@` → store as `email`.
-- A token not containing `@` → store as `project`.
-- If `email` is not provided, set `email` to the session email (Claude Code `userEmail` context value).
+- A token containing `@` → store as `argEmail`.
+- A token not containing `@` → store as `argProject`.
 
-### Step 2 — Resolve Project
+### Step 1b — Load Persisted Config
 
-1. If `project` was supplied as an argument → use it.
-2. Otherwise, read the git `origin` remote:
+If `./.devpilot/my-prs.json` exists, read it and parse `email` and `project` as `configEmail` and `configProject`. If the file is missing or unparseable, treat both as unset (do not error).
 
-   ```bash
-   git remote get-url origin
-   ```
+### Step 2 — Resolve Email and Project
 
-   Parse the project segment using the same patterns as `/dev-workitem`:
-   - `https://dev.azure.com/{org}/{project}/_git/{repo}` → `project`
-   - `git@ssh.dev.azure.com:v3/{org}/{project}/{repo}` → `project`
-   - `https://{org}.visualstudio.com/{project}/_git/{repo}` → `project`
+Apply precedence (highest wins):
 
-3. If no `project` argument and the git remote cannot be read or parsed → stop:
+- `email` = `argEmail` → `configEmail` → session email (Claude Code `userEmail` context value)
+- `project` = `argProject` → `configProject` → git `origin`
 
-   > "No project specified and no Azure DevOps git remote found. Run `/my-prs <projectName>` — e.g. `/my-prs Payments`."
+To derive the project from git, read the remote:
+
+```bash
+git remote get-url origin
+```
+
+Parse the project segment using the same patterns as `/dev-workitem`:
+- `https://dev.azure.com/{org}/{project}/_git/{repo}` → `project`
+- `git@ssh.dev.azure.com:v3/{org}/{project}/{repo}` → `project`
+- `https://{org}.visualstudio.com/{project}/_git/{repo}` → `project`
+
+If `project` cannot be resolved from any source (no argument, no config, no parseable git remote) → stop:
+
+> "No project specified and no Azure DevOps git remote found. Run `/my-prs <projectName>` — e.g. `/my-prs Payments`."
+
+### Step 2b — Persist Resolved Config
+
+Write the resolved `email` and `project` to `./.devpilot/my-prs.json`, creating the `.devpilot` directory if it does not exist:
+
+```json
+{ "email": "{email}", "project": "{project}" }
+```
+
+This is best-effort — if the write fails (e.g. read-only directory), warn but continue; it does not block the listing.
 
 ### Step 3 — Resolve Identity (vote split only)
 
@@ -180,6 +215,8 @@ Assigned to me (none)
 | `core_get_identity_ids` fails / no match | Continue; all reviewer PRs go to "Waiting for my review" with a note; vote labels omitted |
 | `repo_list_pull_requests_by_repo_or_project` fails (either query) | Stop with the error — no partial list |
 | A reviewer PR has no matching reviewer entry for my identity | Place it in "Waiting for my review" (fallback) |
+| `./.devpilot/my-prs.json` missing or unparseable | Treat config as unset; continue with arg/session/git resolution |
+| Writing `./.devpilot/my-prs.json` fails | Warn and continue — config persistence is best-effort, never blocks the listing |
 
 ---
 
@@ -188,7 +225,7 @@ Assigned to me (none)
 - Read-only: no votes, comments, or any write operations
 - Active PRs only
 - Single project per invocation (scope is the resolved project)
-- Stateless: no state file, idempotent, safe to re-run
+- Idempotent and safe to re-run; the only thing it writes is the `./.devpilot/my-prs.json` config (email + default project)
 
 ---
 
