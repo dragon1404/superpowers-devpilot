@@ -117,3 +117,65 @@ The third bucket, **PRs I created**, is `createdByMe`.
 ## Step 5b — Tag New PRs
 
 Build `currentPrIds` = the set of all `pullRequestId` values across the three buckets. A PR is **new** if its id is in `currentPrIds` but not in `previousPrIds`. Record which PRs are new for rendering. If `previousPrIds` is unset (first run), no PR is new.
+
+## Step 6 — Render Output
+
+Print a header line `my-prs — project: {project}`, then three sections in this order: **Waiting for my review**, **Assigned to me**, **PRs I created**. Within each section, sort PRs oldest-first by `creationDate`. Show the count after each section header, e.g. `Waiting for my review (2)`. Empty buckets render as `(none)`, e.g. `Assigned to me (none)`.
+
+Each PR is one compact line:
+
+```
+#{pullRequestId}  {title} — {createdBy.displayName}, {age}{voteLabel}  {prUrl}{newTag}
+```
+
+- `age` — time from `creationDate` to now, rendered compactly (e.g. `3h`, `2d`, `5w`).
+- `voteLabel` — appears only in the **Assigned to me** section, formatted as ` ({label})`.
+- `prUrl` — the full web URL, built from the PR payload's `repository.webUrl` as `{repository.webUrl}/pullrequest/{pullRequestId}`.
+- `newTag` — ` [NEW]` for PRs new since the last run (from Step 5b), otherwise empty.
+
+If `identityUnresolved` is true, print this note immediately under the **Waiting for my review** header:
+
+> _Note: could not resolve identity for `{email}` — all reviewer PRs shown here; vote status unknown._
+
+Example output:
+
+```
+my-prs — project: Payments
+
+Waiting for my review (2)
+  #1423  Fix token refresh race        — alice, 5d   https://dev.azure.com/org/Payments/_git/api/pullrequest/1423
+  #1488  Add retry to webhook sender   — bob,   2d   https://dev.azure.com/org/Payments/_git/api/pullrequest/1488 [NEW]
+
+Assigned to me (1)
+  #1402  Bump SDK to 4.x  — carol, 8d (approved)  https://dev.azure.com/org/Payments/_git/sdk/pullrequest/1402
+
+PRs I created (1)
+  #1500  Refactor cache layer  — 1d  https://dev.azure.com/org/Payments/_git/api/pullrequest/1500
+```
+
+## Step 7 — Persist State
+
+Create the state directory, then write the state file:
+
+```bash
+mkdir -p ./.devpilot
+```
+
+Write `./.devpilot/my-prs.json` with the resolved config and one entry per PR from this run:
+
+```json
+{
+  "email": "{email}",
+  "project": "{project}",
+  "lastCheck": {
+    "checkedAt": "{ISO-8601 timestamp for now}",
+    "prs": [
+      { "id": {pullRequestId}, "url": "{prUrl}", "state": "waiting" },
+      { "id": {pullRequestId}, "url": "{prUrl}", "state": "assigned", "vote": "{voteLabel}" },
+      { "id": {pullRequestId}, "url": "{prUrl}", "state": "created" }
+    ]
+  }
+}
+```
+
+For each PR, `state` is the bucket it was rendered in (`waiting` / `assigned` / `created`), and `vote` is included only for `assigned` entries. This write is best-effort — if it fails (e.g. read-only directory), warn but continue; the listing already shown is unaffected.
