@@ -45,7 +45,11 @@ The skill reads and writes a small JSON file at `./.devpilot/my-prs.json` (in th
   "project": "Payments",
   "lastCheck": {
     "checkedAt": "2026-06-12T09:00:00Z",
-    "prIds": [1423, 1488, 1402, 1500]
+    "prs": [
+      { "id": 1423, "url": "https://dev.azure.com/org/Payments/_git/api/pullrequest/1423", "state": "waiting" },
+      { "id": 1402, "url": "https://dev.azure.com/org/Payments/_git/sdk/pullrequest/1402", "state": "assigned", "vote": "approved" },
+      { "id": 1500, "url": "https://dev.azure.com/org/Payments/_git/api/pullrequest/1500", "state": "created" }
+    ]
   }
 }
 ```
@@ -53,9 +57,15 @@ The skill reads and writes a small JSON file at `./.devpilot/my-prs.json` (in th
 - `email` / `project` — remembered config so a bare `/my-prs` reuses them. Resolution precedence (highest wins):
   - **email**: argument → config file → session email (Claude Code `userEmail`)
   - **project**: argument → config file → git `origin` remote
-- `lastCheck.prIds` — the flat set of pull request IDs surfaced on the previous run, used to tag PRs that are **new since you last checked**.
+- `lastCheck.prs` — an array of the pull requests surfaced on the previous run. Each entry records:
+  - `id` — the `pullRequestId`
+  - `url` — the full web URL of the PR
+  - `state` — the bucket it was in: `"waiting"` (waiting for my review), `"assigned"` (I'm a reviewer and voted), or `"created"` (I authored it)
+  - `vote` — present only when `state` is `"assigned"`; the vote label (`approved`, `approved with suggestions`, `waiting for author`, `rejected`)
 
-The file is rewritten at the end of each run with the resolved config and the current run's PR IDs.
+  This array is used to tag PRs that are **new since you last checked** (by comparing `id`s).
+
+The file is rewritten at the end of each run with the resolved config and the current run's PRs.
 
 ### No organization needed
 
@@ -82,9 +92,9 @@ Take everything after `/my-prs`, trim, and split on whitespace into at most two 
 
 If `./.devpilot/my-prs.json` exists, read it and parse:
 - `email` and `project` as `configEmail` and `configProject`
-- `lastCheck.prIds` as `previousPrIds` (the set of PR IDs from the previous run)
+- `lastCheck.prs` as `previousPrs`; derive `previousPrIds` = the set of `id`s from that array
 
-If the file is missing or unparseable, treat all three as unset (do not error). When `previousPrIds` is unset (first run), nothing is tagged `[NEW]`.
+If the file is missing or unparseable, treat all of these as unset (do not error). When `previousPrIds` is unset (first run), nothing is tagged `[NEW]`.
 
 ### Step 2 — Resolve Email and Project
 
@@ -209,7 +219,7 @@ Assigned to me (none)
 
 ### Step 7 — Persist State
 
-After rendering, write `./.devpilot/my-prs.json` (creating the `.devpilot` directory if needed) with the resolved config and this run's PR IDs:
+After rendering, write `./.devpilot/my-prs.json` (creating the `.devpilot` directory if needed) with the resolved config and one entry per PR from this run:
 
 ```json
 {
@@ -217,12 +227,16 @@ After rendering, write `./.devpilot/my-prs.json` (creating the `.devpilot` direc
   "project": "{project}",
   "lastCheck": {
     "checkedAt": "{ISO-8601 now}",
-    "prIds": [ ...currentPrIds ]
+    "prs": [
+      { "id": {pullRequestId}, "url": "{prUrl}", "state": "waiting" },
+      { "id": {pullRequestId}, "url": "{prUrl}", "state": "assigned", "vote": "{voteLabel}" },
+      { "id": {pullRequestId}, "url": "{prUrl}", "state": "created" }
+    ]
   }
 }
 ```
 
-This is best-effort — if the write fails (e.g. read-only directory), warn but continue; it does not change the listing already shown.
+For each PR, `state` is the bucket it was rendered in (`waiting` / `assigned` / `created`), and `vote` is included only for `assigned` entries. This is best-effort — if the write fails (e.g. read-only directory), warn but continue; it does not change the listing already shown.
 
 ---
 
