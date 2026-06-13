@@ -268,6 +268,8 @@ Call `mcp__azure-devops__repo_create_pull_request_thread` with these flat params
 
 Note: no `filePath` or line params — this is a top-level PR comment. `status: "Closed"` marks it as informational rather than an active review thread requiring resolution.
 
+The `[DevPilot Review] Summary` prefix in the content is the detection marker used by `/my-prs` to classify this PR as **Reviewed by me**. Do not change this prefix.
+
 If the call fails, log: "⚠️ Could not post summary thread — {error}." Continue to Step 8.
 
 ## Step 8 — Report to Developer

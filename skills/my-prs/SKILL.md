@@ -1,6 +1,6 @@
 ---
 name: my-prs
-description: "List active Azure DevOps PRs that involve you — waiting for your review, assigned to you (already voted), and ones you created. Usage: /my-prs [project] [email]"
+description: "List active Azure DevOps PRs that involve you — waiting for your review, already voted, and ones you created. Usage: /my-prs [project] [email]"
 ---
 
 # DevPilot: My Pull Requests
@@ -65,12 +65,12 @@ If `project` cannot be resolved from any source (no argument, no config, no pars
 
 Note: an organization is never resolved or passed — the Azure DevOps MCP server is already configured with its organization.
 
-## Step 3 — Resolve Identity (vote split only)
+## Step 3 — Resolve Identity
 
 Call `mcp__azure-devops__core_get_identity_ids` with:
 - searchFilter: {email}
 
-If it returns an identity, store its GUID as `myIdentityId` and set `identityUnresolved = false`. This identity is used only to find your own vote inside each reviewer PR's `reviewers[]` array.
+If it returns an identity, store its GUID as `myIdentityId` and set `identityUnresolved = false`. This identity is used to match your reviewer entry in each PR's `reviewers[]` array.
 
 If the call fails or returns no match, set `myIdentityId = null` and `identityUnresolved = true`.
 
@@ -98,21 +98,37 @@ If either call fails, stop and say (do not render a partial list):
 
 > "Failed to fetch pull requests for project {project}: {error}."
 
-## Step 5 — Split the Reviewer Bucket by Vote
+## Step 5 — Enrich Reviewer PRs with Vote and Reviewed Status
 
-For each PR in `reviewerPrs`:
+For each PR in `reviewerPrs`, fetch its full details to read the vote:
 
-- If `identityUnresolved` is true → place it in **Waiting for my review** (safe fallback — surfaces it rather than hiding it).
-- Otherwise, find the entry in the PR's `reviewers[]` array whose `id` equals `myIdentityId`, and read its `vote`:
-  - `vote == 0` → **Waiting for my review**
-  - `vote != 0` → **Assigned to me**, with a vote label derived from the vote value:
-    - `10` → `approved`
-    - `5` → `approved with suggestions`
-    - `-5` → `waiting for author`
-    - `-10` → `rejected`
-  - If no reviewer entry matches `myIdentityId` → **Waiting for my review**.
+Call `mcp__azure-devops__repo_get_pull_request_by_id` with:
+- repositoryId: {pr.repository.name}
+- pullRequestId: {pr.pullRequestId}
+- project: {project}
 
-The third bucket, **PRs I created**, is `createdByMe`.
+From the returned `reviewers[]` array, find the entry whose `id` equals `myIdentityId` and read its `vote`. If `identityUnresolved` is true or no matching reviewer entry is found, treat `vote = 0`.
+
+Vote labels:
+- `10` → `approved`
+- `5` → `approved with suggestions`
+- `-5` → `waiting for author`
+- `-10` → `rejected`
+
+**Bucket assignment:**
+- `vote != 0` → **Already voted** (with vote label). Skip thread check for this PR.
+- `vote == 0` → check reviewed status (below), then → **Waiting for my review**.
+
+**Reviewed status check (vote = 0 PRs only):**
+
+Call `mcp__azure-devops__repo_list_pull_request_threads` with:
+- repositoryId: {pr.repository.name}
+- pullRequestId: {pr.pullRequestId}
+- project: {project}
+
+If any thread's first comment (`comments[0].content`) starts with `[DevPilot Review] Summary`, mark this PR as `reviewed = true`. Otherwise `reviewed = false`.
+
+If the thread fetch fails, treat `reviewed = false`.
 
 ## Step 5b — Tag New PRs
 
@@ -120,22 +136,25 @@ Build `currentPrIds` = the set of all `pullRequestId` values across the three bu
 
 ## Step 6 — Render Output
 
-Print a header line `my-prs — project: {project}`, then three sections in this order: **Waiting for my review**, **Assigned to me**, **PRs I created**. Within each section, sort PRs oldest-first by `creationDate`. Show the count after each section header, e.g. `Waiting for my review (2)`. Empty buckets render as `(none)`, e.g. `Assigned to me (none)`.
+Print a header line `my-prs — project: {project}`, then three sections in this order: **Waiting for my review**, **Already voted**, **PRs I created**. Within each section, sort PRs oldest-first by `creationDate`. Show the count after each section header, e.g. `Waiting for my review (2)`. Empty buckets render as `(none)`, e.g. `Already voted (none)`.
 
 Each PR is one compact line:
 
 ```
-#{pullRequestId}  {title} — {createdBy.displayName}, {age}{voteLabel}  {prUrl}{newTag}
+#{pullRequestId}  {title} — {createdBy.displayName}, {age}{statusTags}  {prUrl}{newTag}
 ```
 
 - `age` — time from `creationDate` to now, rendered compactly (e.g. `3h`, `2d`, `5w`).
-- `voteLabel` — appears only in the **Assigned to me** section, formatted as ` ({label})`.
+- `statusTags` — space-separated tags after the age field:
+  - In **Waiting for my review**: append ` [reviewed]` if `reviewed = true`, otherwise nothing.
+  - In **Already voted**: append ` ({voteLabel})` — e.g. ` (approved)`.
+  - In **PRs I created**: no status tags.
 - `prUrl` — the full web URL, built from the PR payload's `repository.webUrl` as `{repository.webUrl}/pullrequest/{pullRequestId}`.
 - `newTag` — ` [NEW]` for PRs new since the last run (from Step 5b), otherwise empty.
 
 If `identityUnresolved` is true, print this note immediately under the **Waiting for my review** header:
 
-> _Note: could not resolve identity for `{email}` — all reviewer PRs shown here; vote status unknown._
+> _Note: could not resolve identity for `{email}` — vote status unknown, all reviewer PRs shown here._
 
 Example output:
 
@@ -143,10 +162,10 @@ Example output:
 my-prs — project: Payments
 
 Waiting for my review (2)
-  #1423  Fix token refresh race        — alice, 5d   https://dev.azure.com/org/Payments/_git/api/pullrequest/1423
-  #1488  Add retry to webhook sender   — bob,   2d   https://dev.azure.com/org/Payments/_git/api/pullrequest/1488 [NEW]
+  #1423  Fix token refresh race        — alice, 5d [reviewed]  https://dev.azure.com/org/Payments/_git/api/pullrequest/1423
+  #1488  Add retry to webhook sender   — bob,   2d              https://dev.azure.com/org/Payments/_git/api/pullrequest/1488 [NEW]
 
-Assigned to me (1)
+Already voted (1)
   #1402  Bump SDK to 4.x  — carol, 8d (approved)  https://dev.azure.com/org/Payments/_git/sdk/pullrequest/1402
 
 PRs I created (1)
@@ -170,12 +189,13 @@ Write `./.devpilot/my-prs.json` with the resolved config and one entry per PR fr
   "lastCheck": {
     "checkedAt": "{ISO-8601 timestamp for now}",
     "prs": [
-      { "id": {pullRequestId}, "url": "{prUrl}", "state": "waiting" },
-      { "id": {pullRequestId}, "url": "{prUrl}", "state": "assigned", "vote": "{voteLabel}" },
+      { "id": {pullRequestId}, "url": "{prUrl}", "state": "waiting", "reviewed": true },
+      { "id": {pullRequestId}, "url": "{prUrl}", "state": "waiting", "reviewed": false },
+      { "id": {pullRequestId}, "url": "{prUrl}", "state": "voted", "vote": "{voteLabel}" },
       { "id": {pullRequestId}, "url": "{prUrl}", "state": "created" }
     ]
   }
 }
 ```
 
-For each PR, `state` is the bucket it was rendered in (`waiting` / `assigned` / `created`), and `vote` is included only for `assigned` entries. This write is best-effort — if it fails (e.g. read-only directory), warn but continue; the listing already shown is unaffected.
+For each PR, `state` is the bucket (`waiting` / `voted` / `created`). `reviewed` is included only for `waiting` entries. `vote` is included only for `voted` entries. This write is best-effort — if it fails (e.g. read-only directory), warn but continue; the listing already shown is unaffected.
