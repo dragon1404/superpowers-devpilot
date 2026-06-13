@@ -202,8 +202,8 @@ Reviews an Azure DevOps pull request and posts findings as inline PR comments. A
 Lists the active pull requests that involve you, so you don't miss reviews. Both arguments are optional and order-independent (the token containing `@` is treated as the email).
 
 PRs are grouped into three buckets:
-- **Waiting for my review** — you're a reviewer and haven't voted
-- **Assigned to me** — you're a reviewer and have already voted (shows your vote)
+- **Waiting for my review** — you're a reviewer and haven't voted yet. Shows a `[reviewed]` tag if `/pr-review` has already posted a DevPilot review on the PR.
+- **Already voted** — you're a reviewer and have cast a vote (shows your vote: `approved`, `approved with suggestions`, `waiting for author`, or `rejected`)
 - **PRs I created**
 
 Project defaults to the current repo's ADO project (parsed from `origin`); email defaults to your session identity. Both can be remembered: DevPilot persists the resolved config and the last-run PR set to `./.devpilot/my-prs.json`, and tags any PR that is new since your last check with `[NEW]`.
