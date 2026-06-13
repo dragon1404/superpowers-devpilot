@@ -190,13 +190,13 @@ Write `./.devpilot/my-prs.json` with the resolved config and one entry per PR fr
   "lastCheck": {
     "checkedAt": "{ISO-8601 timestamp for now}",
     "prs": [
-      { "id": {pullRequestId}, "url": "{prUrl}", "state": "waiting", "reviewed": true },
-      { "id": {pullRequestId}, "url": "{prUrl}", "state": "waiting", "reviewed": false },
-      { "id": {pullRequestId}, "url": "{prUrl}", "state": "voted", "vote": "{voteLabel}" },
-      { "id": {pullRequestId}, "url": "{prUrl}", "state": "created" }
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "waiting", "reviewed": true },
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "waiting", "reviewed": false },
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "voted", "vote": "{voteLabel}" },
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "created" }
     ]
   }
 }
 ```
 
-For each PR, `state` is the bucket (`waiting` / `voted` / `created`). `reviewed` is included only for `waiting` entries. `vote` is included only for `voted` entries. This write is best-effort — if it fails (e.g. read-only directory), warn but continue; the listing already shown is unaffected.
+For each PR, `state` is the bucket (`waiting` / `voted` / `created`). `targetBranch` is always included. `reviewed` is included only for `waiting` entries. `vote` is included only for `voted` entries. This write is best-effort — if it fails (e.g. read-only directory), warn but continue; the listing already shown is unaffected.
