@@ -16,12 +16,25 @@ Each user-facing command is a skill in `skills/<name>/SKILL.md`. Claude Code rea
 | `skills/dev-resume/` | `/dev-resume <id>` | Resume or approve a paused workflow |
 | `skills/dev-fix-pipeline/` | `/dev-fix-pipeline <id>` | Diagnose and fix a failed CI pipeline |
 | `skills/dev-setup/` | `/dev-setup` | Guided prerequisite installation wizard |
+| `skills/pr-review/` | `/pr-review <prUrl\|workItemId>` | Review a PR and post findings as inline ADO threads |
+| `skills/my-prs/` | `/my-prs [project] [email]` | List active PRs involving you, split by vote and reviewed status |
 
 Skills call other skills (e.g. `superpowers:brainstorming`, `superpowers:writing-plans`) and ADO MCP tools (`mcp__azure-devops__*`) to do their work.
 
-## State File
+## Cross-Skill Contract
 
-Workflow state is persisted at `.devpilot/state/<workItemId>.json` in the **target project** (not this repo). The schema is defined in `skills/dev-workitem/SKILL.md` Step 6. Status values drive the branching logic in `skills/dev-resume/SKILL.md`.
+`/pr-review` posts a summary thread whose content starts with `[DevPilot Review] Summary`. `/my-prs` detects this prefix via `mcp__azure-devops__repo_list_pull_request_threads` to mark unvoted reviewer PRs as `[reviewed]`. Do not change this prefix.
+
+## State Files
+
+Both state files live in the **target project** (not this repo):
+
+- **Workflow state** — `.devpilot/state/<workItemId>.json`: persists stage progress for `/dev-workitem` and `/dev-resume`. Schema and status values defined in `skills/dev-workitem/SKILL.md` Step 6; branching logic in `skills/dev-resume/SKILL.md`.
+- **PR list state** — `.devpilot/my-prs.json`: persists resolved email/project config and the last-run PR set (used for `[NEW]` tagging on the next run). Schema defined in `skills/my-prs/SKILL.md` Step 7.
+
+## docs/ Convention
+
+Design specs and implementation plans produced during development of this plugin live in `docs/superpowers/specs/` and `docs/superpowers/plans/`. These are committed history, not generated output — they document why skills were built the way they are.
 
 ## Releasing a New Version
 
