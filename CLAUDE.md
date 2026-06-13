@@ -38,13 +38,17 @@ Design specs and implementation plans produced during development of this plugin
 
 ## Releasing a New Version
 
-Three files must all be updated to the same version string whenever a release is made:
+Every release requires all four steps — do not skip any:
 
-1. `.claude-plugin/plugin.json` — `"version"` field (read by the plugin manager UI)
-2. `.claude-plugin/marketplace.json` — `"version"` inside the `plugins[0]` entry
-3. `package.json` — `"version"` field
+1. Bump the version to the same string in all three files:
+   - `.claude-plugin/plugin.json` — `"version"` field (read by the plugin manager UI)
+   - `.claude-plugin/marketplace.json` — `"version"` inside the `plugins[0]` entry
+   - `package.json` — `"version"` field
+2. Update `README.md` to reflect what changed in the release.
+3. Commit and push both changes.
+4. Tag the release (`git tag vX.Y.Z && git push origin vX.Y.Z`) and create a GitHub release with notes.
 
-After committing, tag the release (`git tag vX.Y.Z`) and create a GitHub release. The plugin manager reads `plugin.json` for the displayed version — if only the git tag is updated, the UI will show the old version.
+The plugin manager reads `plugin.json` for the displayed version — if only the git tag is updated, the UI will show the old version.
 
 ## Dependencies (runtime, not in this repo)
 
