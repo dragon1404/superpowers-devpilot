@@ -44,8 +44,8 @@ Every release requires all four steps — do not skip any:
    - `.claude-plugin/plugin.json` — `"version"` field (read by the plugin manager UI)
    - `.claude-plugin/marketplace.json` — `"version"` inside the `plugins[0]` entry
    - `package.json` — `"version"` field
-2. Update `README.md` to reflect what changed in the release.
-3. Commit and push both changes.
+2. Update `README.md` if the release adds or changes user-facing behaviour.
+3. Commit and push.
 4. Tag the release (`git tag vX.Y.Z && git push origin vX.Y.Z`) and create a GitHub release with notes.
 
 The plugin manager reads `plugin.json` for the displayed version — if only the git tag is updated, the UI will show the old version.
