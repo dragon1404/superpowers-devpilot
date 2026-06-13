@@ -141,9 +141,10 @@ Print a header line `my-prs — project: {project}`, then three sections in this
 Each PR is one compact line:
 
 ```
-#{pullRequestId}  {title} — {createdBy.displayName}, {age}{statusTags}  {prUrl}{newTag}
+#{pullRequestId}  {title} → {targetBranch} — {createdBy.displayName}, {age}{statusTags}  {prUrl}{newTag}
 ```
 
+- `targetBranch` — the PR's target branch with `refs/heads/` stripped (e.g. `main`, `develop`). Read from `targetRefName` in the PR payload.
 - `age` — time from `creationDate` to now, rendered compactly (e.g. `3h`, `2d`, `5w`).
 - `statusTags` — space-separated tags after the age field:
   - In **Waiting for my review**: append ` [reviewed]` if `reviewed = true`, otherwise nothing.
@@ -162,14 +163,14 @@ Example output:
 my-prs — project: Payments
 
 Waiting for my review (2)
-  #1423  Fix token refresh race        — alice, 5d [reviewed]  https://dev.azure.com/org/Payments/_git/api/pullrequest/1423
-  #1488  Add retry to webhook sender   — bob,   2d              https://dev.azure.com/org/Payments/_git/api/pullrequest/1488 [NEW]
+  #1423  Fix token refresh race      → main     — alice, 5d [reviewed]  https://dev.azure.com/org/Payments/_git/api/pullrequest/1423
+  #1488  Add retry to webhook sender → develop  — bob,   2d              https://dev.azure.com/org/Payments/_git/api/pullrequest/1488 [NEW]
 
 Already voted (1)
-  #1402  Bump SDK to 4.x  — carol, 8d (approved)  https://dev.azure.com/org/Payments/_git/sdk/pullrequest/1402
+  #1402  Bump SDK to 4.x  → main  — carol, 8d (approved)  https://dev.azure.com/org/Payments/_git/sdk/pullrequest/1402
 
 PRs I created (1)
-  #1500  Refactor cache layer  — 1d  https://dev.azure.com/org/Payments/_git/api/pullrequest/1500
+  #1500  Refactor cache layer  → main  — 1d  https://dev.azure.com/org/Payments/_git/api/pullrequest/1500
 ```
 
 ## Step 7 — Persist State
