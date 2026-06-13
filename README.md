@@ -206,6 +206,8 @@ PRs are grouped into three buckets:
 - **Already voted** — you're a reviewer and have cast a vote (shows your vote: `approved`, `approved with suggestions`, `waiting for author`, or `rejected`)
 - **PRs I created**
 
+Each PR line shows the target branch (e.g. `→ main`) between the title and the author.
+
 Project defaults to the current repo's ADO project (parsed from `origin`); email defaults to your session identity. Both can be remembered: DevPilot persists the resolved config and the last-run PR set to `./.devpilot/my-prs.json`, and tags any PR that is new since your last check with `[NEW]`.
 
 **Example:**
