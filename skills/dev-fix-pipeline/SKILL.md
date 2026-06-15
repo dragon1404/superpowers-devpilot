@@ -19,9 +19,36 @@ If no workItemId is provided, stop and say: "Please provide a work item ID. Usag
 
 Read `.devpilot/state/{workItemId}.json`.
 
-If the file does not exist, stop and say: "No DevPilot workflow found for work item {workItemId}. Start one with `/dev-workitem {workItemId}`."
+**If the file exists:** store all fields. Note `branch`, `adoOrg`, `adoProject`, `adoRepo`, `prCreated`, and `pipelineFixCount` (treat as 0 if missing). Set `stateFileExists = true`.
 
-Store all fields. Note `branch`, `adoOrg`, `adoProject`, `adoRepo`, `prCreated`, and `pipelineFixCount` (treat as 0 if missing).
+**If the file does not exist:** set `stateFileExists = false` and attempt to recover from ADO:
+
+1. Call `mcp__azure-devops__wit_get_work_item` with:
+   - id: {workItemId}
+   - expand: "relations"
+
+2. From `relations`, filter entries where `rel = "ArtifactLink"` AND `attributes.name = "Pull Request"`. Extract the PR number from each entry's `url` field (`vstfs:///Git/PullRequestId/{collectionId}/{projectId}/{prId}` — rightmost `/`-delimited integer). Store as `linkedPrIds`.
+
+3. If no linked PR entries are found, stop and say:
+   > "No DevPilot state file and no linked pull requests found for work item {workItemId}. Either start a workflow with `/dev-workitem {workItemId}` or link a PR to the work item in ADO."
+
+4. Read `System.TeamProject` from the work item → store as `adoProject`.
+
+5. Call `mcp__azure-devops__repo_list_pull_requests_by_repo_or_project` with:
+   - project: {adoProject}
+   - status: "Active"
+
+   Keep only PRs whose `pullRequestId` is in `linkedPrIds`. If multiple, take the most recent by `creationDate`. If none, stop and say:
+   > "Work item {workItemId} has linked PRs but none are currently active. Cannot determine the source branch."
+
+6. From the chosen PR, store:
+   - `branch` = `sourceRefName` with `refs/heads/` stripped
+   - `adoRepo` = `repository.name`
+   - `adoProject` = `repository.project.name` (overwrite if more specific than above)
+   - `prCreated = true`
+   - `pipelineFixCount = 0`
+
+   Announce: "No local state file found — recovered branch `{branch}` from linked PR #{prId}."
 
 ## Step 3 — Precondition Checks
 
@@ -208,7 +235,9 @@ git push
 
 ## Step 12 — Update State File
 
-Read `.devpilot/state/{workItemId}.json`. Update:
+If `stateFileExists = false`, skip this step entirely — there is no state file to update.
+
+Otherwise, read `.devpilot/state/{workItemId}.json`. Update:
 - `pipelineFixCount`: increment by 1 (set to 1 if field was missing)
 - `lastPipelineFixAt`: current ISO 8601 timestamp
 - `lastUpdated`: current ISO 8601 timestamp
