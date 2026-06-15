@@ -158,7 +158,7 @@ Resumes the workflow from the last completed stage.
 Investigates a failed CI pipeline on the PR for the given work item and automatically applies a fix.
 
 **What it does:**
-1. Checks preconditions: state file exists, PR is open (`prCreated: true`), current branch matches
+1. Checks preconditions: PR is open, current branch matches. If no local state file exists, recovers the source branch by querying the work item's linked active PR in ADO.
 2. Fetches the latest pipeline build for the feature branch (classic or YAML)
 3. If the build is not failed, stops with a status message — no action taken
 4. Retrieves the build log and classifies the failure as automatable or not
@@ -179,9 +179,13 @@ If the pipeline fails again after the fix, run the same command to retry.
 
 ---
 
-### `/pr-review <prUrl | workItemId>`
+### `/pr-review <prUrl | workItemId> [--ado | --local]`
 
 Reviews an Azure DevOps pull request and posts findings as inline PR comments. Accepts either a PR URL directly or a work item ID (DevPilot resolves the linked active PR).
+
+An optional mode flag skips the interactive prompt:
+- `--ado` — Pure ADO mode (recommended): fetches the diff via API, works from any directory
+- `--local` — Local checkout mode: checks out the source branch, more powerful but requires a clean working tree
 
 **What it does:**
 1. Resolves the target PR — from the URL, or by finding the active PR linked to the work item
@@ -192,7 +196,9 @@ Reviews an Azure DevOps pull request and posts findings as inline PR comments. A
 **Example:**
 ```
 /pr-review 42138
-/pr-review https://dev.azure.com/org/project/_git/repo/pullrequest/123
+/pr-review 42138 --ado
+/pr-review 42138 --local
+/pr-review https://dev.azure.com/org/project/_git/repo/pullrequest/123 --ado
 ```
 
 ---
