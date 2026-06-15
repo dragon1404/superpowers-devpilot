@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: "Review an Azure DevOps pull request and post findings as inline PR comments. Usage: /pr-review <prUrl | workItemId>"
+description: "Review an Azure DevOps pull request and post findings as inline PR comments. Usage: /pr-review <prUrl | workItemId> [--ado | --local]"
 ---
 
 # DevPilot: Review Pull Request
@@ -11,22 +11,31 @@ description: "Review an Azure DevOps pull request and post findings as inline PR
 
 ## Step 1 — Detect Input Type
 
-Extract the argument from the user's message (everything after `/pr-review`). Trim whitespace.
+Extract everything after `/pr-review`. Trim whitespace.
 
-- If the argument contains `pullrequest/` → it is a PR URL. Parse using these patterns:
+Check for an optional mode flag anywhere in the input:
+- `--ado` → set `reviewMode = "A"` and remove the flag from the input before further parsing.
+- `--local` → set `reviewMode = "L"` and remove the flag from the input before further parsing.
+- If neither flag is present → set `reviewMode = null` (will be prompted in Step 2).
+
+Parse the remaining input:
+
+- If it contains `pullrequest/` → it is a PR URL. Parse using these patterns:
   - `https://dev.azure.com/{org}/{project}/_git/{repo}/pullrequest/{prId}` → `adoOrg = https://dev.azure.com/{org}`
   - `https://{org}.visualstudio.com/{project}/_git/{repo}/pullrequest/{prId}` → `adoOrg = https://{org}.visualstudio.com`
   - Extract and store: `adoOrg`, `adoProject`, `adoRepo`, `prId` (integer at the end of the URL)
   - Store the full URL as `prUrl`.
   - Skip Step 1b. Proceed to Step 2.
 
-- If the argument is a plain integer (digits only) → treat it as a work item ID. Store as `workItemId`. Proceed to Step 1b.
+- If it is a plain integer (digits only) → treat it as a work item ID. Store as `workItemId`. Proceed to Step 1b.
 
 - If neither condition applies → stop and say:
-  > "Invalid input. Provide a full ADO PR URL or a work item ID (integer).
+  > "Invalid input. Provide a full ADO PR URL or a work item ID (integer), with an optional mode flag.
   > Examples:
   > - `/pr-review 42138`
-  > - `/pr-review https://dev.azure.com/org/project/_git/repo/pullrequest/123`"
+  > - `/pr-review 42138 --ado`
+  > - `/pr-review 42138 --local`
+  > - `/pr-review https://dev.azure.com/org/project/_git/repo/pullrequest/123 --local`"
 
 ## Step 1b — Resolve Work Item ID to PR (work item path only)
 
@@ -66,7 +75,9 @@ Proceed to Step 2.
 
 ## Step 2 — Prompt Review Mode
 
-Ask the developer:
+If `reviewMode` was already set by a flag in Step 1 (`--ado` or `--local`), skip this step entirely.
+
+Otherwise ask the developer:
 
 > "How would you like to review this PR?
 > **[A] Pure ADO** (recommended) — fetches diff via API, works from any directory
