@@ -175,13 +175,13 @@ PRs I created (1)
 
 ## Step 7 — Persist State
 
-Create the state directory, then write the state file:
+Create the state directory, then fully overwrite the state file (do not merge or patch — replace the entire file contents):
 
 ```bash
 mkdir -p ./.devpilot
 ```
 
-Write `./.devpilot/my-prs.json` with the resolved config and one entry per PR from this run:
+Write `./.devpilot/my-prs.json`, replacing any existing content, with the resolved config and one entry per PR from this run:
 
 ```json
 {
