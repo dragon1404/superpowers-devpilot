@@ -223,7 +223,7 @@ For each finding in `criticalAndImportant`, call `mcp__azure-devops__repo_create
 - repositoryId: {adoRepo}
 - pullRequestId: {prId}
 - project: {adoProject}
-- content: `"[DevPilot Review] {severity}: {title}\n\n{detail}\n\n💡 {suggestion}"`
+- content: `"[DevPilot Review] {severity}: {title}\n\n{detail}\n\n💡 Suggestion: {suggestion}"`
 - filePath: {filePath}
 - rightFileStartLine: {lineNumber}
 - rightFileStartOffset: 1
@@ -231,7 +231,7 @@ For each finding in `criticalAndImportant`, call `mcp__azure-devops__repo_create
 - rightFileEndOffset: 1
 - status: "Active"
 
-If `suggestion` is absent or empty, omit the `💡 {suggestion}` line from `content`.
+If `suggestion` is absent or empty, omit the `💡 Suggestion: {suggestion}` line from `content`.
 
 If `lineNumber` is null, OMIT `filePath`, `rightFileStartLine`, `rightFileStartOffset`, `rightFileEndLine`, and `rightFileEndOffset` (post as a PR-level comment with just `content` + `status`). When `lineNumber` is present, include all of those params as shown above.
 
