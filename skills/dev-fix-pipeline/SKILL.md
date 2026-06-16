@@ -1,6 +1,6 @@
 ---
 name: dev-fix-pipeline
-description: "Investigate a failed CI pipeline on an open PR and automatically fix the error. Usage: /dev-fix-pipeline <workItemId>"
+description: "Investigate a failed CI pipeline on an open PR and automatically fix the error. Usage: /dev-fix-pipeline [workItemId]"
 ---
 
 # DevPilot: Fix Pipeline Failure
@@ -13,7 +13,21 @@ description: "Investigate a failed CI pipeline on an open PR and automatically f
 
 Extract the workItemId from the user's message (the integer following `/dev-fix-pipeline`).
 
-If no workItemId is provided, stop and say: "Please provide a work item ID. Usage: /dev-fix-pipeline <workItemId>"
+If no workItemId is provided:
+
+1. Run:
+   ```bash
+   ls .devpilot/state/ 2>/dev/null
+   ```
+2. Collect all filenames matching `<integer>.json`. Strip the `.json` suffix to get candidate IDs.
+3. If exactly one candidate exists → use it as `workItemId` and announce: "No work item ID provided — using work item {workItemId} from state file."
+4. If multiple candidates exist → list them and ask the developer which one to fix:
+   > "Multiple DevPilot workflows found. Which work item's pipeline do you want to fix?
+   > {numbered list of IDs}
+   > Reply with the number or work item ID."
+   Wait for the response. Use the chosen ID as `workItemId`.
+5. If no candidates exist → stop and say: "Please provide a work item ID. Usage: `/dev-fix-pipeline <workItemId>`  
+   Or start a new workflow with `/dev-workitem <workItemId>`."
 
 ## Step 2 — Read State File
 
