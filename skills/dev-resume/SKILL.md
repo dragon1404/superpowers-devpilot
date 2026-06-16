@@ -24,7 +24,8 @@ If no workItemId is provided:
    > {numbered list of IDs}
    > Reply with the number or work item ID."
    Wait for the response. Use the chosen ID as `workItemId`.
-5. If no candidates exist → stop and say: "No DevPilot state files found in `.devpilot/state/`. Start a workflow with `/dev-workitem <workItemId>`."
+5. If no candidates exist → stop and say: "Please provide a work item ID. Usage: `/dev-resume <workItemId>`  
+   Or start a new workflow with `/dev-workitem <workItemId>`."
 
 ## Step 2 — Read State File
 
