@@ -14,7 +14,7 @@ Each user-facing command is a skill in `skills/<name>/SKILL.md`. Claude Code rea
 |---|---|---|
 | `skills/dev-workitem/` | `/dev-workitem <id>` | Start a new delivery workflow for an ADO work item |
 | `skills/dev-resume/` | `/dev-resume [id]` | Resume or approve a paused workflow; auto-detects work item ID from state files if omitted |
-| `skills/dev-fix-pipeline/` | `/dev-fix-pipeline [id]` | Diagnose and fix a failed CI pipeline; auto-detects work item ID from state files if omitted |
+| `skills/dev-fix-pipeline/` | `/dev-fix-pipeline [id\|prUrl]` | Diagnose and fix a failed CI pipeline; accepts work item ID or PR URL; auto-detects from state files if omitted |
 | `skills/dev-setup/` | `/dev-setup` | Guided prerequisite installation wizard |
 | `skills/pr-review/` | `/pr-review <prUrl\|workItemId>` | Review a PR and post findings as inline ADO threads |
 | `skills/my-prs/` | `/my-prs [project] [email]` | List active PRs involving you, split by vote and reviewed status |

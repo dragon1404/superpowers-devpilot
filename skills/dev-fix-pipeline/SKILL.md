@@ -1,19 +1,42 @@
 ---
 name: dev-fix-pipeline
-description: "Investigate a failed CI pipeline on an open PR and automatically fix the error. Usage: /dev-fix-pipeline [workItemId]"
+description: "Investigate a failed CI pipeline on an open PR and automatically fix the error. Usage: /dev-fix-pipeline [workItemId | prUrl]"
 ---
 
 # DevPilot: Fix Pipeline Failure
 
-**Announce:** "Investigating pipeline failure for work item {workItemId}."
+**Announce:** "Investigating pipeline failure…"
 
 ---
 
-## Step 1 — Extract Work Item ID
+## Step 1 — Detect Input Type
 
-Extract the workItemId from the user's message (the integer following `/dev-fix-pipeline`).
+Extract everything after `/dev-fix-pipeline`. Trim whitespace. Store as `rawInput`.
 
-If no workItemId is provided:
+**If `rawInput` contains `pullrequest/`** → treat as a PR URL:
+
+1. Parse using these patterns:
+   - `https://dev.azure.com/{org}/{project}/_git/{repo}/pullrequest/{prId}` → `adoOrg = https://dev.azure.com/{org}`
+   - `https://{org}.visualstudio.com/{project}/_git/{repo}/pullrequest/{prId}` → `adoOrg = https://{org}.visualstudio.com`
+   Extract and store: `adoOrg`, `adoProject`, `adoRepo`, `prId` (integer at the end).
+2. Call `mcp__azure-devops__repo_get_pull_request_by_id` with:
+   - repositoryId: {adoRepo}
+   - pullRequestId: {prId}
+   - project: {adoProject}
+3. From the response, store:
+   - `branch` = `sourceRefName` with `refs/heads/` stripped
+   - `adoRepo` = `repository.name`
+   - `adoProject` = `repository.project.name`
+   - `prCreated = true`
+   - `pipelineFixCount = 0`
+   - `stateFileExists = false`
+4. If the PR response includes `workItemRefs` (a non-empty array), take the first entry's `id` as `workItemId`. Otherwise set `workItemId = null`.
+5. Announce: "Investigating pipeline failure for PR #{prId} on branch `{branch}`." (append " (linked to work item {workItemId})" if workItemId is not null).
+6. **Skip Step 2 entirely. Proceed to Step 3.**
+
+**If `rawInput` is a plain integer** → treat as a work item ID. Store as `workItemId`. Proceed to Step 2.
+
+**If `rawInput` is empty** → auto-detect from state files:
 
 1. Run:
    ```bash
@@ -26,8 +49,16 @@ If no workItemId is provided:
    > {numbered list of IDs}
    > Reply with the number or work item ID."
    Wait for the response. Use the chosen ID as `workItemId`.
-5. If no candidates exist → stop and say: "Please provide a work item ID. Usage: `/dev-fix-pipeline <workItemId>`  
+5. If no candidates exist → stop and say: "Please provide a work item ID or PR URL. Usage: `/dev-fix-pipeline <workItemId>` or `/dev-fix-pipeline <prUrl>`  
    Or start a new workflow with `/dev-workitem <workItemId>`."
+
+**If `rawInput` is neither a PR URL nor an integer** → stop and say:
+> "Invalid input. Provide a work item ID or a full ADO PR URL.
+> Examples:
+> - `/dev-fix-pipeline 42138`
+> - `/dev-fix-pipeline https://dev.azure.com/org/project/_git/repo/pullrequest/123`"
+
+**Global null-guard (applies for the rest of this skill):** Wherever a step calls `mcp__azure-devops__wit_add_work_item_comment` or otherwise references `workItemId`, skip that call silently if `workItemId` is null.
 
 ## Step 2 — Read State File
 
