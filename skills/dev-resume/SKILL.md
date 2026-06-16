@@ -1,6 +1,6 @@
 ---
 name: dev-resume
-description: "Resume a DevPilot workflow from the last completed stage. Running this command while in an approval-wait state counts as approving that stage. Usage: /dev-resume <workItemId>"
+description: "Resume a DevPilot workflow from the last completed stage. Running this command while in an approval-wait state counts as approving that stage. Usage: /dev-resume [workItemId]"
 ---
 
 # DevPilot: Resume Workflow
@@ -11,7 +11,20 @@ description: "Resume a DevPilot workflow from the last completed stage. Running 
 
 Extract the workItemId from the user's message (the integer following `/dev-resume`).
 
-If no workItemId is provided, stop and say: "Please provide a work item ID. Usage: /dev-resume <workItemId>"
+If no workItemId is provided:
+
+1. Run:
+   ```bash
+   ls .devpilot/state/ 2>/dev/null
+   ```
+2. Collect all filenames matching `<integer>.json`. Strip the `.json` suffix to get candidate IDs.
+3. If exactly one candidate exists → use it as `workItemId` and announce: "No work item ID provided — resuming work item {workItemId} from state file."
+4. If multiple candidates exist → list them and ask the developer which one to resume:
+   > "Multiple DevPilot workflows found. Which work item do you want to resume?
+   > {numbered list of IDs}
+   > Reply with the number or work item ID."
+   Wait for the response. Use the chosen ID as `workItemId`.
+5. If no candidates exist → stop and say: "No DevPilot state files found in `.devpilot/state/`. Start a workflow with `/dev-workitem <workItemId>`."
 
 ## Step 2 — Read State File
 

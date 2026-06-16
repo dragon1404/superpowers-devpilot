@@ -13,7 +13,7 @@ Each user-facing command is a skill in `skills/<name>/SKILL.md`. Claude Code rea
 | Skill directory | Command | Purpose |
 |---|---|---|
 | `skills/dev-workitem/` | `/dev-workitem <id>` | Start a new delivery workflow for an ADO work item |
-| `skills/dev-resume/` | `/dev-resume <id>` | Resume or approve a paused workflow |
+| `skills/dev-resume/` | `/dev-resume [id]` | Resume or approve a paused workflow; auto-detects work item ID from state files if omitted |
 | `skills/dev-fix-pipeline/` | `/dev-fix-pipeline <id>` | Diagnose and fix a failed CI pipeline |
 | `skills/dev-setup/` | `/dev-setup` | Guided prerequisite installation wizard |
 | `skills/pr-review/` | `/pr-review <prUrl\|workItemId>` | Review a PR and post findings as inline ADO threads |
