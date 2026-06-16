@@ -117,7 +117,7 @@ Vote labels:
 
 **Bucket assignment:**
 - `vote != 0` → **Already voted** (with vote label). Skip thread check for this PR.
-- `vote == 0` → check reviewed status (below), then → **Waiting for my review**.
+- `vote == 0` → check reviewed status (below), then assign to **Reviewed, pending vote** or **Waiting for my review**.
 
 **Reviewed status check (vote = 0 PRs only):**
 
@@ -126,9 +126,9 @@ Call `mcp__azure-devops__repo_list_pull_request_threads` with:
 - pullRequestId: {pr.pullRequestId}
 - project: {project}
 
-If any thread's first comment (`comments[0].content`) starts with `[DevPilot Review] Summary`, mark this PR as `reviewed = true`. Otherwise `reviewed = false`.
+If any thread's first comment (`comments[0].content`) starts with `[DevPilot Review] Summary`, mark this PR as `reviewed = true` → bucket: **Reviewed, pending vote**. Otherwise `reviewed = false` → bucket: **Waiting for my review**.
 
-If the thread fetch fails, treat `reviewed = false`.
+If the thread fetch fails, treat `reviewed = false` → **Waiting for my review**.
 
 ## Step 5b — Tag New PRs
 
@@ -136,7 +136,7 @@ Build `currentPrIds` = the set of all `pullRequestId` values across the three bu
 
 ## Step 6 — Render Output
 
-Print a header line `my-prs — project: {project}`, then three sections in this order: **Waiting for my review**, **Already voted**, **PRs I created**. Within each section, sort PRs oldest-first by `creationDate`. Show the count after each section header, e.g. `Waiting for my review (2)`. Empty buckets render as `(none)`, e.g. `Already voted (none)`.
+Print a header line `my-prs — project: {project}`, then four sections in this order: **Waiting for my review**, **Reviewed, pending vote**, **Already voted**, **PRs I created**. Within each section, sort PRs oldest-first by `creationDate`. Show the count after each section header, e.g. `Waiting for my review (2)`. Empty buckets render as `(none)`, e.g. `Already voted (none)`.
 
 Each PR is one compact line:
 
@@ -147,7 +147,8 @@ Each PR is one compact line:
 - `targetBranch` — the PR's target branch with `refs/heads/` stripped (e.g. `main`, `develop`). Read from `targetRefName` in the PR payload.
 - `age` — time from `creationDate` to now, rendered compactly (e.g. `3h`, `2d`, `5w`).
 - `statusTags` — space-separated tags after the age field:
-  - In **Waiting for my review**: append ` [reviewed]` if `reviewed = true`, otherwise nothing.
+  - In **Waiting for my review**: no status tags.
+  - In **Reviewed, pending vote**: no status tags (section heading is self-explanatory).
   - In **Already voted**: append ` ({voteLabel})` — e.g. ` (approved)`.
   - In **PRs I created**: no status tags.
 - `prUrl` — the full web URL, built from the PR payload's `repository.webUrl` as `{repository.webUrl}/pullrequest/{pullRequestId}`.
@@ -162,9 +163,11 @@ Example output:
 ```
 my-prs — project: Payments
 
-Waiting for my review (2)
-  #1423  Fix token refresh race      → main     — alice, 5d [reviewed]  https://dev.azure.com/org/Payments/_git/api/pullrequest/1423
-  #1488  Add retry to webhook sender → develop  — bob,   2d              https://dev.azure.com/org/Payments/_git/api/pullrequest/1488 [NEW]
+Waiting for my review (1)
+  #1488  Add retry to webhook sender → develop  — bob,   2d  https://dev.azure.com/org/Payments/_git/api/pullrequest/1488 [NEW]
+
+Reviewed, pending vote (1)
+  #1423  Fix token refresh race      → main     — alice, 5d  https://dev.azure.com/org/Payments/_git/api/pullrequest/1423
 
 Already voted (1)
   #1402  Bump SDK to 4.x  → main  — carol, 8d (approved)  https://dev.azure.com/org/Payments/_git/sdk/pullrequest/1402
@@ -190,8 +193,8 @@ Write `./.devpilot/my-prs.json`, replacing any existing content, with the resolv
   "lastCheck": {
     "checkedAt": "{ISO-8601 timestamp for now}",
     "prs": [
-      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "waiting", "reviewed": true },
-      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "waiting", "reviewed": false },
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "waiting" },
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "reviewed" },
       { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "voted", "vote": "{voteLabel}" },
       { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "created" }
     ]
@@ -199,4 +202,4 @@ Write `./.devpilot/my-prs.json`, replacing any existing content, with the resolv
 }
 ```
 
-For each PR, `state` is the bucket (`waiting` / `voted` / `created`). `targetBranch` is always included. `reviewed` is included only for `waiting` entries. `vote` is included only for `voted` entries. This write is best-effort — if it fails (e.g. read-only directory), warn but continue; the listing already shown is unaffected.
+For each PR, `state` is the bucket (`waiting` / `reviewed` / `voted` / `created`). `targetBranch` is always included. `vote` is included only for `voted` entries. This write is best-effort — if it fails (e.g. read-only directory), warn but continue; the listing already shown is unaffected.
