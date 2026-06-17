@@ -35,8 +35,9 @@ If the file exists and parses as JSON, extract:
 - `email` → `configEmail`
 - `project` → `configProject`
 - `lastCheck.prs` → `previousPrs`; derive `previousPrIds` = the set of `id` values in that array
+- `previousReviewedPrIds` = the set of `id` values where `state === "reviewed"` in that array
 
-If the file is missing or does not parse, treat `configEmail`, `configProject`, and `previousPrIds` as unset. Do not error. When `previousPrIds` is unset (first run), no PR will be tagged `[NEW]` later.
+If the file is missing or does not parse, treat `configEmail`, `configProject`, `previousPrIds`, and `previousReviewedPrIds` as unset. Do not error. When `previousPrIds` is unset (first run), no PR will be tagged `[NEW]` later.
 
 ## Step 2 — Resolve Email and Project
 
@@ -121,7 +122,9 @@ Vote labels:
 
 **Reviewed status check (vote = 0 PRs only):**
 
-Call `mcp__azure-devops__repo_list_pull_request_threads` with:
+First check if this PR's id is in `previousReviewedPrIds`. If yes, mark `reviewed = true` immediately — skip the thread fetch entirely (a DevPilot review thread never disappears, so the cached state is reliable).
+
+Otherwise, call `mcp__azure-devops__repo_list_pull_request_threads` with:
 - repositoryId: {pr.repository.name}
 - pullRequestId: {pr.pullRequestId}
 - project: {project}

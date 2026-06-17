@@ -216,6 +216,8 @@ Each PR line shows the target branch (e.g. `→ main`) between the title and the
 
 Project defaults to the current repo's ADO project (parsed from `origin`); email defaults to your session identity. Both can be remembered: DevPilot persists the resolved config and the last-run PR set to `./.devpilot/my-prs.json`, and tags any PR that is new since your last check with `[NEW]`.
 
+On repeat runs, PRs already recorded as `reviewed` in `my-prs.json` skip the thread-fetch API call — so subsequent `/my-prs` invocations are faster when you have a steady backlog of reviewed-but-unvoted PRs.
+
 **Example:**
 ```
 /my-prs
