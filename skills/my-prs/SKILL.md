@@ -179,6 +179,11 @@ PRs I created (1)
   #1500  Refactor cache layer  → main  — 1d  https://dev.azure.com/org/Payments/_git/api/pullrequest/1500
 ```
 
+After printing the listing, if the **Waiting for my review** bucket has one or more PRs, print this alert:
+
+> ⚠️ You have {N} PR(s) waiting for your review.
+> Run `/pr-review <prUrl>` to review one, or `/pr-review-all` to review all at once.
+
 ## Step 7 — Persist State
 
 Create the state directory, then fully overwrite the state file (do not merge or patch — replace the entire file contents):
