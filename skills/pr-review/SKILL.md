@@ -260,24 +260,58 @@ Count:
 - `countImportant` = number of findings with `severity = "Important"`
 - `countMinor` = number of findings with `severity = "Minor"`
 
-Determine `assessment`:
-- `countCritical > 0` → `"Critical issues found — do not merge until resolved."`
-- `countCritical = 0` AND `countImportant > 0` → `"Important issues found — fix before merging."`
-- `countCritical = 0` AND `countImportant = 0` AND `countMinor > 0` → `"Minor issues only — safe to merge after review."`
-- All zero → `"No issues found — looks good to merge."`
-
 Build `filesReviewedLabel`:
 - If PR was not capped: `"{n} files reviewed"`
 - If PR was capped at 30: `"30 of {total} files reviewed (first 30 only)"`
+
+Build `summaryBody` — a multiline string composed of these sections in order:
+
+1. Header line (always):
+   ```
+   PR: {title}
+   Files reviewed: {filesReviewedLabel} | Findings: {countCritical} Critical · {countImportant} Important · {countMinor} Minor
+   ```
+
+2. If `countCritical > 0`, append:
+   ```
+   \n**Critical findings:**
+   ```
+   Then for each Critical finding, append one line:
+   - If `lineNumber` is not null: `` - `{filePath}` line {lineNumber}: {title} — {detail} ``
+   - If `lineNumber` is null: `` - `{filePath}`: {title} — {detail} ``
+
+3. If `countImportant > 0`, append:
+   ```
+   \n**Important findings:**
+   ```
+   Then for each Important finding, append one line in the same format as above.
+
+4. If `countMinor > 0`, append:
+   ```
+   \n**Minor suggestions:** {countMinor} item(s) — see inline comments for details.
+   ```
+
+5. Write `assessment` — a genuine 1–2 sentence narrative you compose from the actual findings. Describe what was found and why it may be relevant. Do not include any merge recommendation or directive. Tone: informational reference only, for the developer to consider.
+   - If all counts are zero: `"No issues found. The changes look clean."`
+
+   Append:
+   ```
+   \n**Assessment:** {assessment}
+   ```
+
+Compose the final `content`:
+```
+[DevPilot Review] Summary\n\n{summaryBody}
+```
 
 Call `mcp__azure-devops__repo_create_pull_request_thread` with these flat params (no `filePath` or line params — this is a top-level PR comment):
 - repositoryId: {adoRepo}
 - pullRequestId: {prId}
 - project: {adoProject}
-- content: `"[DevPilot Review] Summary\n\nPR: {title}\nFiles reviewed: {filesReviewedLabel}\nFindings: {countCritical} Critical · {countImportant} Important · {countMinor} Minor\n\nOverall: {assessment}"`
+- content: {content}
 - status: "Closed"
 
-Note: no `filePath` or line params — this is a top-level PR comment. `status: "Closed"` marks it as informational rather than an active review thread requiring resolution.
+Note: `status: "Closed"` marks it as informational rather than an active review thread requiring resolution.
 
 The `[DevPilot Review] Summary` prefix in the content is the detection marker used by `/my-prs` to classify this PR as **Reviewed by me**. Do not change this prefix.
 
