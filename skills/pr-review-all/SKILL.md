@@ -67,7 +67,7 @@ Each subagent receives the following prompt (substitute the actual values for th
 > ```json
 > { "prId": {pr.id}, "url": "{pr.url}", "countCritical": N, "countImportant": N, "countMinor": N, "posted": true|false, "error": "<omit field if no error>" }
 > ```
-> Set `posted: true` if the summary thread was successfully posted (Step 7 of pr-review succeeded). Set `error` only if the review could not be completed; omit the field on success."
+> Set `posted: true` if the summary thread was successfully posted (Step 7 of pr-review succeeded). If the review was skipped because a `[DevPilot Review] Summary` thread already exists (Step 3b), set `posted: false` and `error: "Already reviewed — skipped"`. Set `error` for any other failure; omit on success."
 
 Wait for all subagents to complete before proceeding.
 

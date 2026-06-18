@@ -104,6 +104,20 @@ Read and store:
 If `status` is not `"active"`, stop and say:
 > "PR #{prId} is {status}. Only active PRs can be reviewed."
 
+## Step 3b — Check for Existing Review
+
+Call `mcp__azure-devops__repo_list_pull_request_threads` with:
+- repositoryId: {adoRepo}
+- pullRequestId: {prId}
+- project: {adoProject}
+
+Scan the returned threads. For each thread, check if its first comment's `content` starts with `[DevPilot Review] Summary`.
+
+If such a thread is found, stop and say:
+> "PR #{prId} has already been reviewed by DevPilot. Skipping to avoid duplicate comments."
+
+If no such thread exists, continue to Step 4.
+
 ## Step 4 — Fetch Diff (Mode A only)
 
 *Skip this entire step if `reviewMode = "L"`. Proceed to Step 5.*
