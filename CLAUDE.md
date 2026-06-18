@@ -18,12 +18,15 @@ Each user-facing command is a skill in `skills/<name>/SKILL.md`. Claude Code rea
 | `skills/dev-setup/` | `/dev-setup` | Guided prerequisite installation wizard |
 | `skills/pr-review/` | `/pr-review <prUrl\|workItemId>` | Review a PR and post findings as inline ADO threads |
 | `skills/my-prs/` | `/my-prs [project] [email]` | List active PRs involving you, split by vote and reviewed status |
+| `skills/pr-review-all/` | `/pr-review-all` | Review all `waiting` PRs in parallel via ADO mode; reads from `.devpilot/my-prs.json` |
 
 Skills call other skills (e.g. `superpowers:brainstorming`, `superpowers:writing-plans`) and ADO MCP tools (`mcp__azure-devops__*`) to do their work.
 
 ## Cross-Skill Contract
 
 `/pr-review` posts a summary thread whose content starts with `[DevPilot Review] Summary`. `/my-prs` detects this prefix via `mcp__azure-devops__repo_list_pull_request_threads` to mark unvoted reviewer PRs as `[reviewed]`. Do not change this prefix.
+
+`/pr-review-all` reads `.devpilot/my-prs.json` (written by `/my-prs`) and spawns one Agent subagent per `"waiting"` PR, each running the full `/pr-review --ado` flow. The `[DevPilot Review] Summary` detection contract between `/pr-review` and `/my-prs` remains unchanged.
 
 ## State Files
 

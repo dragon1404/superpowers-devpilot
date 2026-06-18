@@ -227,6 +227,29 @@ On repeat runs, PRs already recorded as `reviewed` in `my-prs.json` skip the thr
 
 ---
 
+### `/pr-review-all`
+
+Reviews all pending Azure DevOps PRs in parallel — the batch equivalent of running `/pr-review --ado` on every PR in your "Waiting for my review" bucket.
+
+**What it does:**
+1. Reads `.devpilot/my-prs.json` (populated by `/my-prs`) to find all PRs with `state: "waiting"`
+2. Warns if the state file is older than 60 minutes and lets you choose to continue or refresh first
+3. Spawns one review subagent per PR, all running concurrently in ADO mode
+4. Posts inline comment threads and a `[DevPilot Review] Summary` thread on each PR
+5. Prints a summary table with finding counts (Critical / Important / Minor) and post status for each PR
+
+Always uses ADO mode (pure API, no local checkout) — safe to run in parallel without affecting your working tree.
+
+**Requires:** `.devpilot/my-prs.json` — run `/my-prs` first if you haven't already.
+
+**Example:**
+```
+/my-prs
+/pr-review-all
+```
+
+---
+
 ## Workflow Stages
 
 | # | Stage | Skill invoked | Artifact |

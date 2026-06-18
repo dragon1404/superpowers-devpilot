@@ -8,8 +8,8 @@
   "plugins": [
     {
       "name": "superpowers-devpilot",
-      "description": "Automate your Azure DevOps delivery lifecycle — from work item to pull request — with AI-powered code review, automated pipeline fixes, and two approval checkpoints, powered by Claude Code and superpowers skills. Includes /my-prs to track pull requests awaiting your review.",
-      "version": "0.8.6",
+      "description": "Automate your Azure DevOps delivery lifecycle — from work item to pull request — with AI-powered code review, automated pipeline fixes, and two approval checkpoints, powered by Claude Code and superpowers skills. Includes /my-prs to track pull requests and /pr-review-all to review all pending PRs in one shot.",
+      "version": "0.9.0",
       "source": "./",
       "author": {
         "name": "Dragon",
