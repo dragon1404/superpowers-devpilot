@@ -1,6 +1,6 @@
 ---
 name: my-prs
-description: "List active Azure DevOps PRs that involve you — waiting for your review, already voted, and ones you created. Usage: /my-prs [project] [email]"
+description: "List active Azure DevOps PRs that involve you — waiting for your review, already voted, and ones you created. Usage: /my-prs [--refresh]"
 ---
 
 # DevPilot: My Pull Requests
@@ -17,11 +17,7 @@ Confirm the Azure DevOps MCP tools are available in this session (e.g. `mcp__azu
 
 ## Step 1 — Parse Arguments
 
-Take everything after `/my-prs`, trim it, and split on whitespace into at most two tokens.
-
-- A token containing `@` → store as `argEmail`.
-- A token not containing `@` → store as `argProject`.
-- If there are no tokens, both `argEmail` and `argProject` are unset.
+Check if `--refresh` is present in the arguments. If so, set `refreshMode = true`; otherwise `refreshMode = false`.
 
 ## Step 1b — Load Persisted State
 
@@ -44,14 +40,12 @@ If the file is missing or does not parse, treat `configEmail`, `configProject`, 
 ## Step 2 — Resolve Email and Project
 
 Resolve `email` by precedence (first available wins):
-1. `argEmail`
-2. `configEmail`
-3. The session email — the user's email from your context (the `userEmail` value).
+1. `configEmail` (from state file)
+2. If still unset, ask the user: "What is your Azure DevOps email address?" and store the response as `email`.
 
 Resolve `project` by precedence (first available wins):
-1. `argProject`
-2. `configProject`
-3. Derived from the git `origin` remote. Read it:
+1. `configProject` (from state file)
+2. Derived from the git `origin` remote. Read it:
 
    ```bash
    git remote get-url origin
@@ -62,9 +56,7 @@ Resolve `project` by precedence (first available wins):
    - `git@ssh.dev.azure.com:v3/{org}/{project}/{repo}` → `project`
    - `https://{org}.visualstudio.com/{project}/_git/{repo}` → `project`
 
-If `project` cannot be resolved from any source (no argument, no config, no parseable git remote), stop and say:
-
-> "No project specified and no Azure DevOps git remote found. Run `/my-prs <projectName>` — e.g. `/my-prs Payments`."
+3. If still unset, ask the user: "What is your Azure DevOps project name?" and store the response as `project`.
 
 Note: an organization is never resolved or passed — the Azure DevOps MCP server is already configured with its organization.
 
@@ -109,7 +101,9 @@ For each PR in `reviewerPrs`:
 
 **Cache hit check (skip fetches if fresh):**
 
-Look up `prCache[pr.pullRequestId]`. If an entry exists with `state` of `reviewed` or `voted`, AND its `checkedAt` timestamp is within 30 minutes of now:
+Skip this check entirely if `refreshMode` is true.
+
+Otherwise, look up `prCache[pr.pullRequestId]`. If an entry exists with `state` of `reviewed` or `voted`, AND its `checkedAt` timestamp is within 30 minutes of now:
 - Use cached `state` and `vote` directly. Assign to the appropriate bucket. Skip all API calls for this PR.
 
 Otherwise, proceed with fetches:
