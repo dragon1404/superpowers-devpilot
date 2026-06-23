@@ -203,9 +203,9 @@ An optional mode flag skips the interactive prompt:
 
 ---
 
-### `/my-prs [project] [email]`
+### `/my-prs [--refresh]`
 
-Lists the active pull requests that involve you, so you don't miss reviews. Both arguments are optional and order-independent (the token containing `@` is treated as the email).
+Lists the active pull requests that involve you, so you don't miss reviews.
 
 PRs are grouped into three buckets:
 - **Waiting for my review** — you're a reviewer and haven't voted yet. Shows a `[reviewed]` tag if `/pr-review` has already posted a DevPilot review on the PR.
@@ -214,15 +214,20 @@ PRs are grouped into three buckets:
 
 Each PR line shows the target branch (e.g. `→ main`) between the title and the author.
 
-Project defaults to the current repo's ADO project (parsed from `origin`); email defaults to your session identity. Both can be remembered: DevPilot persists the resolved config and the last-run PR set to `./.devpilot/my-prs.json`, and tags any PR that is new since your last check with `[NEW]`.
+**First run:** DevPilot asks for your email and project name if they can't be inferred from the git remote. Resolved values are saved to `.devpilot/my-prs.json` and reused on every subsequent run — no need to pass arguments again.
 
-On repeat runs, PRs already recorded as `reviewed` in `my-prs.json` skip the thread-fetch API call — so subsequent `/my-prs` invocations are faster when you have a steady backlog of reviewed-but-unvoted PRs.
+**Performance:** DevPilot caches several things to reduce API calls on repeat runs:
+- Your Azure DevOps identity GUID is persisted and reused (skips `core_get_identity_ids`)
+- PRs in `reviewed` or `voted` state are cached with a timestamp; if re-run within 30 minutes, their details are not re-fetched
+- PRs already recorded as `reviewed` skip the thread-fetch entirely
+- Any PR new since the last run is tagged `[NEW]`
+
+Use `--refresh` to bypass the 30-minute cache and force a full fetch of all reviewer PRs.
 
 **Example:**
 ```
 /my-prs
-/my-prs Payments
-/my-prs Payments me@corp.com
+/my-prs --refresh
 ```
 
 ---
