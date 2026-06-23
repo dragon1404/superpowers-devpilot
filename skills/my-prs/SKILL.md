@@ -34,10 +34,12 @@ cat ./.devpilot/my-prs.json 2>/dev/null
 If the file exists and parses as JSON, extract:
 - `email` → `configEmail`
 - `project` → `configProject`
+- `identityId` → `cachedIdentityId` (may be absent on older state files)
 - `lastCheck.prs` → `previousPrs`; derive `previousPrIds` = the set of `id` values in that array
 - `previousReviewedPrIds` = the set of `id` values where `state === "reviewed"` in that array
+- `prCache` = a map of `id` → `{ state, checkedAt, vote }` built from `lastCheck.prs` (only entries that have a `checkedAt` field)
 
-If the file is missing or does not parse, treat `configEmail`, `configProject`, `previousPrIds`, and `previousReviewedPrIds` as unset. Do not error. When `previousPrIds` is unset (first run), no PR will be tagged `[NEW]` later.
+If the file is missing or does not parse, treat `configEmail`, `configProject`, `cachedIdentityId`, `previousPrIds`, `previousReviewedPrIds`, and `prCache` as unset. Do not error. When `previousPrIds` is unset (first run), no PR will be tagged `[NEW]` later.
 
 ## Step 2 — Resolve Email and Project
 
@@ -68,7 +70,9 @@ Note: an organization is never resolved or passed — the Azure DevOps MCP serve
 
 ## Step 3 — Resolve Identity
 
-Call `mcp__azure-devops__core_get_identity_ids` with:
+If `cachedIdentityId` is set, use it directly as `myIdentityId` and set `identityUnresolved = false`. Skip the API call.
+
+Otherwise, call `mcp__azure-devops__core_get_identity_ids` with:
 - searchFilter: {email}
 
 If it returns an identity, store its GUID as `myIdentityId` and set `identityUnresolved = false`. This identity is used to match your reviewer entry in each PR's `reviewers[]` array.
@@ -101,7 +105,16 @@ If either call fails, stop and say (do not render a partial list):
 
 ## Step 5 — Enrich Reviewer PRs with Vote and Reviewed Status
 
-For each PR in `reviewerPrs`, fetch its full details to read the vote:
+For each PR in `reviewerPrs`:
+
+**Cache hit check (skip fetches if fresh):**
+
+Look up `prCache[pr.pullRequestId]`. If an entry exists with `state` of `reviewed` or `voted`, AND its `checkedAt` timestamp is within 30 minutes of now:
+- Use cached `state` and `vote` directly. Assign to the appropriate bucket. Skip all API calls for this PR.
+
+Otherwise, proceed with fetches:
+
+**Fetch full details to read the vote:**
 
 Call `mcp__azure-devops__repo_get_pull_request_by_id` with:
 - repositoryId: {pr.repository.name}
@@ -198,16 +211,17 @@ Write `./.devpilot/my-prs.json`, replacing any existing content, with the resolv
 {
   "email": "{email}",
   "project": "{project}",
+  "identityId": "{myIdentityId or null}",
   "lastCheck": {
     "checkedAt": "{ISO-8601 timestamp for now}",
     "prs": [
-      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "waiting" },
-      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "reviewed" },
-      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "voted", "vote": "{voteLabel}" },
-      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "created" }
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "waiting", "checkedAt": "{ISO-8601 timestamp for now}" },
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "reviewed", "checkedAt": "{ISO-8601 timestamp for now}" },
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "voted", "vote": "{voteLabel}", "checkedAt": "{ISO-8601 timestamp for now}" },
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "created", "checkedAt": "{ISO-8601 timestamp for now}" }
     ]
   }
 }
 ```
 
-For each PR, `state` is the bucket (`waiting` / `reviewed` / `voted` / `created`). `targetBranch` is always included. `vote` is included only for `voted` entries. This write is best-effort — if it fails (e.g. read-only directory), warn but continue; the listing already shown is unaffected.
+For each PR, `state` is the bucket (`waiting` / `reviewed` / `voted` / `created`). `targetBranch` is always included. `checkedAt` is the ISO-8601 timestamp for this run (same value for all entries). `vote` is included only for `voted` entries. This write is best-effort — if it fails (e.g. read-only directory), warn but continue; the listing already shown is unaffected.
