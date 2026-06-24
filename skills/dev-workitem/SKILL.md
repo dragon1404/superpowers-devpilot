@@ -135,13 +135,7 @@ Use the two absolute paths to compute the relative path:
 ```bash
 python3 -c "import os; print(os.path.relpath('{worktree_abs}', '{main_root}'))"
 ```
-Store the result (e.g. `../feature-21238-add-payment`) as `worktreePath`.
-
-If not inside a worktree, check whether one exists for the feature branch:
-```bash
-git worktree list --porcelain
-```
-Find any entry whose `branch` line matches `refs/heads/feature/{workItemId}-{slug}`. If found, compute its relative path from the main repo root using the same `python3 os.path.relpath` approach and store it as `worktreePath`. Otherwise set `worktreePath` to `null`.
+Store the result (e.g. `../feature-21238-add-payment`) as `worktreePath` for use in this session only — do not persist it to the state file.
 
 ## Step 6 — Initialize State File
 
@@ -153,7 +147,6 @@ Write `.devpilot/state/{workItemId}.json` with this exact structure (substitutin
 {
   "workItemId": 0,
   "branch": "feature/0-slug",
-  "worktreePath": null,
   "adoOrg": "https://dev.azure.com/org",
   "adoProject": "Project",
   "adoRepo": "Repo",
@@ -173,7 +166,7 @@ Write `.devpilot/state/{workItemId}.json` with this exact structure (substitutin
 }
 ```
 
-Replace `0`, `"feature/0-slug"`, `worktreePath`, org/project/repo, and timestamp with actual values. Use ISO 8601 format for `lastUpdated`. Set `worktreePath` to the path string from Step 5b, or `null` if none was found. `pipelineFixCount` starts at `0` and `lastPipelineFixAt` starts as `null` — do not change these initial values.
+Replace `0`, `"feature/0-slug"`, org/project/repo, and timestamp with actual values. Use ISO 8601 format for `lastUpdated`. `pipelineFixCount` starts at `0` and `lastPipelineFixAt` starts as `null` — do not change these initial values.
 
 ## Step 7 — Post ADO Comment: Design Started
 

@@ -37,12 +37,17 @@ Store all fields from the state file for use in subsequent steps.
 
 ## Step 2b — Surface Worktree Path
 
-If `worktreePath` is not null, tell the developer:
+Run:
+```bash
+git worktree list --porcelain
+```
+
+Find any entry whose `branch` line matches `refs/heads/{branch}` (using the `branch` value from the state file). If found, read its `worktree` line as the absolute path and tell the developer:
 
 > This workflow has a git worktree at: `{worktreePath}`
 > Ensure you are running from that directory before continuing.
 
-If `worktreePath` is null, continue without comment.
+If no matching worktree is found, continue without comment.
 
 ## Step 2c — Detect Gitignore Settings
 
