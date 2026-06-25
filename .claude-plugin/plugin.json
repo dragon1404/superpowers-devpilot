@@ -1,7 +1,7 @@
 {
   "name": "superpowers-devpilot",
   "description": "Automated software delivery workflow: Azure DevOps integration + superpowers skills orchestration. Commands: /dev-workitem <id>, /dev-resume <id>, /dev-fix-pipeline <id>, /pr-review <prUrl|workItemId>, /pr-review-all, /my-prs [project], /dev-setup",
-  "version": "0.9.6",
+  "version": "0.9.7",
   "author": {
     "name": "Dragon",
     "email": "tangphamtunglong1404@gmail.com"
