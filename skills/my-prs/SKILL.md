@@ -95,6 +95,14 @@ If either call fails, stop and say (do not render a partial list):
 
 > "Failed to fetch pull requests for project {project}: {error}."
 
+## Step 4b — Filter Ignored Reviewer PRs
+
+Skip this step entirely if `refreshMode` is true.
+
+For each PR in `reviewerPrs`, compute `ageInDays = (now - pr.creationDate) / 86400000`. If `ageInDays > 7`, move the PR from `reviewerPrs` into `ignoredPrs`. Otherwise keep it in `reviewerPrs`.
+
+`ignoredPrs` receive no enrichment and are not shown in any bucket. They are persisted in Step 7 with `state: "ignored"`.
+
 ## Step 5 — Enrich Reviewer PRs with Vote and Reviewed Status
 
 For each PR in `reviewerPrs`:
@@ -186,6 +194,10 @@ PRs I created (1)
   #1500  Refactor cache layer  → main  — 1d  https://dev.azure.com/org/Payments/_git/api/pullrequest/1500
 ```
 
+If `ignoredPrs` is non-empty, print a footer line after the four sections:
+
+> _({N} reviewer PR(s) older than 7 days ignored — run `/my-prs --refresh` to include them.)_
+
 After printing the listing, if the **Waiting for my review** bucket has one or more PRs, print this alert:
 
 > ⚠️ You have {N} PR(s) waiting for your review.
@@ -209,10 +221,11 @@ Write `./.devpilot/my-prs.json`, replacing any existing content, with the resolv
   "lastCheck": {
     "checkedAt": "{ISO-8601 timestamp for now}",
     "prs": [
-      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "waiting", "checkedAt": "{ISO-8601 timestamp for now}" },
-      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "reviewed", "checkedAt": "{ISO-8601 timestamp for now}" },
-      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "voted", "vote": "{voteLabel}", "checkedAt": "{ISO-8601 timestamp for now}" },
-      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "created", "checkedAt": "{ISO-8601 timestamp for now}" }
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "waiting",  "createdOn": "{pr.creationDate}", "checkedAt": "{ISO-8601 timestamp for now}" },
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "reviewed", "createdOn": "{pr.creationDate}", "checkedAt": "{ISO-8601 timestamp for now}" },
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "voted",    "vote": "{voteLabel}", "createdOn": "{pr.creationDate}", "checkedAt": "{ISO-8601 timestamp for now}" },
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "created",  "createdOn": "{pr.creationDate}", "checkedAt": "{ISO-8601 timestamp for now}" },
+      { "id": {pullRequestId}, "url": "{prUrl}", "targetBranch": "{targetBranch}", "state": "ignored",  "createdOn": "{pr.creationDate}", "checkedAt": "{ISO-8601 timestamp for now}" }
     ]
   }
 }

@@ -221,8 +221,9 @@ Each PR line shows the target branch (e.g. `→ main`) between the title and the
 - PRs in `reviewed` or `voted` state are cached with a timestamp; if re-run within 30 minutes, their details are not re-fetched
 - PRs already recorded as `reviewed` skip the thread-fetch entirely
 - Any PR new since the last run is tagged `[NEW]`
+- Reviewer PRs older than 7 days are automatically ignored (no enrichment calls made); a footer shows the ignored count
 
-Use `--refresh` to bypass the 30-minute cache and force a full fetch of all reviewer PRs.
+Use `--refresh` to bypass all caching and the 7-day ignore filter, forcing a full fetch of all reviewer PRs.
 
 **Example:**
 ```
